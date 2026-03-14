@@ -1,0 +1,10 @@
+build/
+.worktrees/
+*.o
+*.d
+*.lst
+*.map
+*.elf
+*.bin
+*.hex
+*.a

@@ -1,0 +1,107 @@
+  ---
+  KiCad Schematic Plan — Daisy Seed Delay Pedal
+
+  Sheets (hierarchical)
+
+  ┌────────────────────┬─────────────────────────────────────────────────┐
+  │       Sheet        │                    Contents                     │
+  ├────────────────────┼─────────────────────────────────────────────────┤
+  │ top.kicad_sch      │ Daisy Seed module, power rails, sheet links     │
+  ├────────────────────┼─────────────────────────────────────────────────┤
+  │ pots.kicad_sch     │ 7× pot voltage dividers                         │
+  ├────────────────────┼─────────────────────────────────────────────────┤
+  │ controls.kicad_sch │ Encoder, bypass footswitch, tap footswitch      │
+  ├────────────────────┼─────────────────────────────────────────────────┤
+  │ io.kicad_sch       │ Mono ¼" in/out jacks, relay bypass, LED         │
+  ├────────────────────┼─────────────────────────────────────────────────┤
+  │ midi.kicad_sch     │ TRS MIDI input (Type-A), 6N138 optocoupler      │
+  ├────────────────────┼─────────────────────────────────────────────────┤
+  │ power.kicad_sch    │ 9V DC jack, 7805/LDO → 5V, Daisy 3V3 decoupling │
+  └────────────────────┴─────────────────────────────────────────────────┘
+
+  ---
+  Component List
+
+  Power (power.kicad_sch)
+
+  ┌───────┬────────────────────────────┬─────────────────────────────┐
+  │  Ref  │            Part            │            Notes            │
+  ├───────┼────────────────────────────┼─────────────────────────────┤
+  │ J1    │ 2.1mm barrel jack          │ 9V center-positive          │
+  ├───────┼────────────────────────────┼─────────────────────────────┤
+  │ U_REG │ MCP1700-3302 LDO (or 7805) │ 9V → 5V for Daisy VIN       │
+  ├───────┼────────────────────────────┼─────────────────────────────┤
+  │ C1,C2 │ 100µF electrolytic         │ Input/output bulk           │
+  ├───────┼────────────────────────────┼─────────────────────────────┤
+  │ C3,C4 │ 100nF ceramic              │ LDO bypass caps             │
+  ├───────┼────────────────────────────┼─────────────────────────────┤
+  │ D1    │ 1N4001                     │ Reverse-polarity protection │
+  └───────┴────────────────────────────┴─────────────────────────────┘
+
+  Daisy Seed (top.kicad_sch)
+
+  ┌───────────────────┬────────────────────────┬─────────────────────────────────┐
+  │        Pin        │         Signal         │           Destination           │
+  ├───────────────────┼────────────────────────┼─────────────────────────────────┤
+  │ VIN               │ 5V from LDO            │ Power sheet                     │
+  ├───────────────────┼────────────────────────┼─────────────────────────────────┤
+  │ AGND / DGND       │ GND                    │ Common ground star              │
+  ├───────────────────┼────────────────────────┼─────────────────────────────────┤
+  │ D0 / D1 / D2      │ ENC_A / ENC_B / ENC_SW │ Controls sheet                  │
+  ├───────────────────┼────────────────────────┼─────────────────────────────────┤
+  │ D3                │ SW_BYPASS              │ Controls sheet                  │
+  ├───────────────────┼────────────────────────┼─────────────────────────────────┤
+  │ D4                │ SW_TAP                 │ Controls sheet                  │
+  ├───────────────────┼────────────────────────┼─────────────────────────────────┤
+  │ D5                │ RELAY                  │ IO sheet                        │
+  ├───────────────────┼────────────────────────┼─────────────────────────────────┤
+  │ D6                │ LED_BYPASS             │ IO sheet                        │
+  ├───────────────────┼────────────────────────┼─────────────────────────────────┤
+  │ ADC0–ADC6 (A0–A6) │ POT_TIME … POT_MOD_DEP │ Pots sheet                      │
+  ├───────────────────┼────────────────────────┼─────────────────────────────────┤
+  │ UART1 RX (D14)    │ MIDI IN                │ MIDI sheet                      │
+  ├───────────────────┼────────────────────────┼─────────────────────────────────┤
+  │ USB D+/D−         │ USB MIDI               │ USB-B or USB-C connector        │
+  ├───────────────────┼────────────────────────┼─────────────────────────────────┤
+  │ OUT_L / IN_L      │ Audio                  │ IO sheet (mono, single channel) │
+  └───────────────────┴────────────────────────┴─────────────────────────────────┘
+
+  Pots (pots.kicad_sch)
+
+  7× identical subcircuits — one per parameter (Time, Repeats, Mix, Filter, Grit, ModSpd, ModDep):
+  3V3 ──┬── POT wiper ── ADCn
+        └── 100nF to GND  (anti-aliasing / debounce)
+  GND ──┘
+  - Part: Alpha 9mm vertical, 10kΩ linear (RV09 series)
+  - Wiper connected to ADC pin through 1kΩ series resistor (protect ADC from shorts)
+
+  Controls (controls.kicad_sch)
+
+  - Encoder (EC11 compatible): A→D0, B→D1, SW→D2, with 10kΩ pull-ups to 3V3 and 100nF to GND on each line
+  - Bypass footswitch (SPST momentary, 3PDT or SPST since relay handles audio): → D3, 10kΩ pull-up + 100nF
+  - Tap footswitch (SPST momentary): → D4, 10kΩ pull-up + 100nF
+
+  Audio I/O (io.kicad_sch)
+
+  - Input jack (Neutrik NMJ6HCD2 or Switchcraft 12B): tip → Daisy IN_L, sleeve → GND
+  - Output jack: Daisy OUT_L → tip
+  - Relay bypass (G5V-1 5V SPDT): controlled by D5 via NPN transistor (2N3904 + 1kΩ base resistor + flyback diode). Relay routes input directly to output when bypassed.
+  - Bypass LED: D6 → 470Ω resistor → LED anode → GND
+
+  MIDI (midi.kicad_sch)
+
+  Standard DIN-5 / TRS Type-A passive input circuit:
+  TRS tip  → 220Ω → pin 5 of 6N138
+  TRS ring → 220Ω → pin 4 of 6N138 (with 1N4148 protection diode)
+  6N138 pin 6 (output) → 3V3 pull-up (4.7kΩ) → D14 (UART1 RX)
+
+  ---
+  Grounding Strategy
+
+  - Single ground plane; audio ground and digital ground meet at one star point near the Daisy AGND pin
+  - Input jack sleeve is the audio ground reference; digital ground tied at the power connector
+
+  Suggested PCB Form Factor
+
+  - ~100 × 50 mm — fits a 1590BB enclosure
+  - Daisy Seed on daughter headers (2× 20-pin), pots/jacks on panel edge

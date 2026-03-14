@@ -1,0 +1,87 @@
+## Encoder-Control + Preset Storage Migration Plan (Daisy Delay)
+
+  ### Summary
+
+  Replace analog pot-driven parameter control with encoder-driven editing, add 8 persistent local presets in QSPI
+  flash, and document the new hardware/UI workflow.
+  Chosen defaults: 4 encoders + shift, onboard QSPI, tap=load / hold=save, chorded preset mode, preset stores mode
+  + 7 params, 8 slots.
+
+  ### Implementation Changes
+
+  - Control model refactor
+      - Replace pot sampling path with encoder delta path in Controls/ControlState.
+      - Introduce ParamEditState (normalized [0..1] values for all 7 params) as the single control source for
+        BuildParams.
+      - Keep MIDI CC override behavior, but apply CC updates into ParamEditState (so OLED and saved presets always
+        reflect effective values).
+  - Encoder mapping and interaction
+      - Hardware target: keep current mode encoder and add 4 encoder pots for parameters.
+      - Encoder parameter map:
+          - Primary layer: Time, Repeats, Mix, Filter
+          - Shift layer (mode-encoder switch held): Grit, ModSpd, ModDep, unused/reserved
+      - Mode encoder turn continues to select delay mode exactly as today.
+      - Encoder acceleration and step scaling:
+          - base step 0.005 normalized/tick
+          - fast-turn step 0.015 when consecutive ticks arrive within 40 ms
+          - clamp hard to [0,1].
+  - Preset subsystem
+      - Add PresetManager using daisy::PersistentStorage (QSPI backend).
+      - New persisted schema (versioned):
+          - header: magic, version, CRC, active slot
+          - 8 slots, each with: valid, DelayModeId mode, float norm[7]
+      - Boot behavior:
+          - load storage; if invalid/empty, initialize slot 0 from defaults and mark valid.
+          - recall active slot into ParamEditState and mode.
+      - Runtime behavior:
+          - preset load copies slot values to ParamEditState, activates stored mode, updates audio immediately.
+          - preset save writes current mode + normalized params to selected slot and commits only on data change.
+  - Preset UI/footswitch behavior (no tap-tempo regression)
+      - Normal tap switch behavior remains tap tempo.
+      - Preset actions are only active while mode-encoder switch is held:
+          - tap short: load current preset slot
+          - tap long (>=700 ms): save to current preset slot (with overwrite confirmation banner on OLED)
+      - Slot selection while holding mode-encoder switch:
+          - turn mode encoder to select slot 1..8 (wrap).
+  - Display/documentation updates
+      - Extend OLED rendering with lightweight status row: active slot, shift-layer indicator, save/load feedback.
+      - Update README hardware section for encoder-pot wiring and new pin map.
+      - Add README “Preset Workflow” and “Encoder Layer Map” sections.
+      - Update architecture notes: control flow becomes Encoders/MIDI -> ParamEditState -> ParamSet.
+      - Add a short migration note: old pot hardware is unsupported after this change.
+
+  ### Public Interfaces / Types to Add or Change
+
+  - ControlState: remove pot_normalized[NUM_POTS]; add encoder delta fields (mode + 4 param encoders) and modifier/
+    hold flags.
+  - constants.h:
+      - rename conceptual NUM_POTS usage to NUM_PARAMS (value remains 7).
+      - add preset constants: PRESET_SLOT_COUNT=8, PRESET_HOLD_MS=700, step/accel constants.
+  - New module: src/presets/preset_manager.h/.cpp with:
+      - Init(), LoadActive(...), LoadSlot(slot, ...), SaveSlot(slot, ...), SetActiveSlot(slot), GetActiveSlot().
+  - DisplayManager::Update(...) gains minimal preset UI state input (active slot + transient status flags).
+
+  ### Test Plan
+
+  - Unit-level (host/logic)
+      - encoder step/accel math and clamping.
+      - preset serialization/deserialization, version mismatch fallback, CRC reject path.
+      - slot bounds/wrap (0..7) and save-on-dirty behavior.
+  - Firmware integration
+      - boot with empty QSPI: defaults created, slot 1 recalled.
+      - save slot, power-cycle, reload confirms persistence.
+      - preset recall updates both mode and audible parameter state in one control cycle.
+      - MIDI CC after recall updates value and subsequent save persists updated state.
+  - Manual hardware acceptance
+      - all 7 params reachable via primary+shift layer.
+      - tap tempo works normally when mode-encoder switch is not held.
+      - held-mode + tap short loads slot; held-mode + tap long saves slot.
+      - OLED shows slot and action feedback; no blocking/audio glitches during save.
+
+  ### Assumptions and Defaults
+
+  - Existing mode encoder remains in hardware; 4 additional encoder pots are added for parameter editing.
+  - QSPI is available and safe for infrequent preset writes (save-only on explicit long-hold).
+  - Preset format v1 stores only mode + 7 normalized params (not bypass state, MIDI learn map, or tap tempo
+    history).
+  - MIDI Program Change behavior remains mode-select only (not mapped to local preset slots) in this iteration.
