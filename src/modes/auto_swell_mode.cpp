@@ -26,9 +26,8 @@ void AutoSwellMode::Reset() {
 }
 
 void AutoSwellMode::Prepare(const ParamSet& params) {
-    // Speed (0.05..10 Hz): repurpose as attack time (fast speed = short attack)
-    // Map: speed 0.05 Hz → ~10 sec attack (coef very small), speed 10 Hz → ~50ms
-    const float attack_ms  = 1000.0f / (params.speed * 5.0f);  // 20ms..4000ms
+    // Speed (0.010..0.500 s): attack time in seconds (short = fast swell)
+    const float attack_ms  = params.speed * 1000.0f;           // 10ms..500ms
     const float release_ms = 50.0f + params.p1 * 1950.0f;      // 50ms..2000ms
 
     // One-pole IIR coefficients: α = 1 - exp(-1 / (τ * fs))
@@ -52,11 +51,12 @@ StereoFrame AutoSwellMode::Process(float input, const ParamSet& params) {
 
     float wet = input * swell_gain_ * (1.0f + params.depth);
 
+    // Always write to delay line so buffer is primed when P2 is turned up
+    s_swell_line.Write(wet);
+
     // Optional chorus shimmer from P2: blend in a short modulated delay
     if (params.p2 > 0.05f) {
-        const float chorus_delay = kSwellChorusDelay;
-        s_swell_line.Write(wet);
-        s_swell_line.SetDelay(chorus_delay);
+        s_swell_line.SetDelay(kSwellChorusDelay);
         const float chorus_wet = s_swell_line.Read();
         wet = wet * (1.0f - params.p2 * 0.3f) + chorus_wet * params.p2 * 0.3f;
     }

@@ -17,12 +17,17 @@ public:
 
 private:
     static constexpr int kMaxStages = 16;
-    Lfo          lfo_;
-    AllpassFilter stages_[kMaxStages];
-    DcBlocker    dc_;
-    float        lfo_coeff_ = 0.0f;  // cached allpass coefficient from LFO
-    float        feedback_  = 0.0f;  // last output for regen
-    int          num_stages_ = 4;    // active stage count
+    Lfo           lfo_;
+    Lfo           lfo2_;                  // quadrature LFO for Barber Pole (π/2 offset)
+    AllpassFilter stages_[kMaxStages];    // stages[0..3]=chainA, [4..7]=chainB (Barber Pole)
+    DcBlocker     dc_;
+    float         lfo_coeff_  = 0.0f;    // cached allpass coefficient (chain A / normal)
+    float         lfo_coeff2_ = 0.0f;    // cached allpass coefficient for chain B
+    float         lfo_val_    = 0.0f;    // stored LFO value for Barber Pole crossfade
+    float         feedback_   = 0.0f;    // regen state for chain A / normal
+    float         feedback2_  = 0.0f;    // regen state for chain B (Barber Pole)
+    int           num_stages_  = 4;      // active stage count (normal modes)
+    bool          barber_pole_ = false;  // true when sub-mode 6 is active
 };
 
 } // namespace pedal

@@ -10,7 +10,6 @@ void DestroyerMode::Init() {
 
 void DestroyerMode::Reset() {
     svf_.Reset();
-    lfo_.Init(0.5f, LfoWave::Sine);
     held_sample_  = 0.0f;
     decimate_acc_ = 0.0f;
     decimate_rate_= 1.0f;
@@ -19,14 +18,12 @@ void DestroyerMode::Reset() {
 }
 
 void DestroyerMode::Prepare(const ParamSet& params) {
-    lfo_.SetRate(params.speed);
-
     // Bitcrush: depth 0..1 → bits 16..4
     bits_ = 16 - static_cast<int>(params.depth * 12.0f);
     if (bits_ < 1) bits_ = 1;
 
-    // Decimation rate: depth → 1× to 48× (reduces effective sample rate)
-    decimate_rate_ = 1.0f + params.depth * 47.0f;
+    // Decimation rate: speed already in physical units (1×–48×) from SPEED_DESTROYER
+    decimate_rate_ = params.speed;
 
     // Post-filter
     const float cutoff = 80.0f + params.tone * (SAMPLE_RATE * 0.45f - 80.0f);
@@ -49,22 +46,18 @@ StereoFrame DestroyerMode::Process(float input, const ParamSet& params) {
         x = floorf(x * levels + 0.5f) / levels;
     }
 
-    // Vinyl noise from P2 upper range
-    if (params.p2 > 0.5f) {
+    // Post-filter (always LP — canonical bitcrusher output)
+    svf_.Process(x);
+    float wet = svf_.lp();
+
+    // Vinyl noise: P2 0..1 → noise blend amount
+    if (params.p2 > 0.0f) {
         rand_ = rand_ * 1664525u + 1013904223u;
         const float noise = static_cast<float>(static_cast<int32_t>(rand_))
                           * (1.0f / 2147483648.0f)
-                          * (params.p2 - 0.5f) * 0.04f;
-        x += noise;
+                          * params.p2 * 0.02f;
+        wet += noise;
     }
-
-    // Post-filter
-    svf_.Process(x);
-    float wet;
-    const float ftype = params.p2 * 2.0f;  // 0=LP, 1=BP, 2=HP
-    if      (ftype < 0.5f) wet = svf_.lp();
-    else if (ftype < 1.5f) wet = svf_.bp();
-    else                   wet = svf_.hp();
 
     return {wet, wet};
 }

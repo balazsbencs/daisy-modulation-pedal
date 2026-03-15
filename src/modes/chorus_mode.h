@@ -19,7 +19,8 @@ public:
 private:
     Lfo        lfo_[3];        // 3 LFOs for Multi sub-mode (120° offsets)
     BbdEmulator bbd_;
-    DcBlocker   dc_;
+    DcBlocker   dc_;           // DC blocker for left channel
+    DcBlocker   dc_r_;         // DC blocker for right channel (Multi/Detune sub-modes)
     uint32_t    rand_ = 12345;
     float       delays_[3] = {};  // cached delay values per tap (in samples)
     int         sub_mode_ = 4;    // cached sub-mode index

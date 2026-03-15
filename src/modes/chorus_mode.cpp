@@ -19,12 +19,14 @@ void ChorusMode::Init() {
         lfo_[i].SetPhaseOffset(static_cast<float>(i) * PI_2_3);
     }
     dc_.Init();
+    dc_r_.Init();
 }
 
 void ChorusMode::Reset() {
     s_chorus_line.Reset();
     for (auto& l : lfo_) l.Reset();
     dc_.Init();
+    dc_r_.Init();
     bbd_.Reset();
     rand_ = 12345;
 }
@@ -98,7 +100,7 @@ StereoFrame ChorusMode::Process(float input, const ParamSet& params) {
     }
 
     wet_l = dc_.Process(wet_l);
-    wet_r = dc_.Process(wet_r);  // Note: uses same DC blocker — acceptable for mono input
+    wet_r = dc_r_.Process(wet_r);
 
     return {wet_l, wet_r};
 }

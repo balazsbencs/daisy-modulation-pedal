@@ -72,10 +72,11 @@ pedal::ParamSet ModulationPluginProcessor::buildParamsFromState(float host_perio
     const float n_level = clamp01(getParam(apvts_, "level"));
 
     ParamSet ps;
-    if (host_period_s > 0.0f) {
-        // Tempo sync: convert beat period → LFO speed (Hz)
-        // Clamp to the speed range so the LFO stays sensible.
-        ps.speed = juce::jlimit(0.05f, 10.0f, 1.0f / host_period_s);
+    // AutoSwell uses speed as attack time (seconds), not Hz — skip tempo sync.
+    // All other modes: clamp to the mode-specific speed range max.
+    if (host_period_s > 0.0f && current_mode_ != ModModeId::AutoSwell) {
+        const float max_hz = get_param_range(current_mode_, ParamId::Speed).max;
+        ps.speed = juce::jlimit(0.05f, max_hz, 1.0f / host_period_s);
     } else {
         ps.speed = map_param(n_speed, get_param_range(current_mode_, ParamId::Speed));
     }
