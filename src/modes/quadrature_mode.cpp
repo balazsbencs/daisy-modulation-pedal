@@ -33,6 +33,8 @@ void QuadratureMode::Reset() {
     hilbert_.Reset();
     lfo_.Init(1.0f, LfoWave::Sine);
     carrier_phase_ = 0.0f;
+    phase_inc_     = 0.0f;
+    sub_mode_      = 0;
 }
 
 void QuadratureMode::Prepare(const ParamSet& params) {
@@ -67,12 +69,12 @@ StereoFrame QuadratureMode::Process(float input, const ParamSet& params) {
     switch (sub_mode_) {
         case 0: {
             // AM — ring modulation with stereo rotation.
-            // Left: input*cos, Right: input*-sin.
-            // P1 blends between mono ring-mod (0) and full quadrature rotation (1).
+            // Left: always input*cos (ring mod). Right blends from ring to input*-sin.
+            // P1=0 → mono ring-mod on both channels; P1=1 → full quadrature stereo.
             const float ring = input * cos_c;
             const float p1   = params.p1;
             return {
-                ring * (1.0f - p1) + (input * cos_c) * p1,
+                ring,
                 ring * (1.0f - p1) + (input * (-sin_c)) * p1,
             };
         }

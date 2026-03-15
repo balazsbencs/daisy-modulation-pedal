@@ -105,7 +105,8 @@ static pedal::ParamSet BuildParams(const ParamEditState& edit,
     ps.level = map_param(edit.norm[6], get_param_range(mode, ParamId::Level));
 
     if (speed_override > 0.0f) {
-        ps.speed = (speed_override < 10.0f) ? speed_override : 10.0f;
+        const float rate_hz = 1.0f / speed_override;
+        ps.speed = (rate_hz < 10.0f) ? rate_hz : 10.0f;
     }
 
     return ps;

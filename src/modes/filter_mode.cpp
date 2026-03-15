@@ -13,9 +13,10 @@ void FilterMode::Reset() {
     svf_.Reset();
     env_.Init(5.0f, 80.0f);
     dc_.Init();
-    mod_val_  = 0.5f;
-    use_env_  = false;
-    env_inv_  = false;
+    mod_val_            = 0.5f;
+    envelope_cutoff_hz_ = 1000.0f;
+    use_env_            = false;
+    env_inv_            = false;
 }
 
 void FilterMode::Prepare(const ParamSet& params) {
@@ -52,17 +53,23 @@ void FilterMode::Prepare(const ParamSet& params) {
         const float sweep   = base_hz * params.depth * mod_val_;
         const float cutoff  = 80.0f + sweep;
         svf_.SetFreq(cutoff > 12000.0f ? 12000.0f : cutoff);
+    } else {
+        // Apply envelope cutoff computed during the previous block's Process() calls.
+        // This moves tanf() out of the per-sample ISR hot path.
+        svf_.SetFreq(envelope_cutoff_hz_);
     }
 }
 
 StereoFrame FilterMode::Process(float input, const ParamSet& params) {
     if (use_env_) {
-        // Envelope follower modulates cutoff
+        // Envelope follower modulates cutoff.
+        // Store the desired cutoff for Prepare() to apply via SetFreq() (block-rate),
+        // keeping tanf() out of the per-sample ISR hot path.
         float env_val = env_.Process(input);  // 0..1
         if (env_inv_) env_val = 1.0f - env_val;
         const float base_hz = 80.0f + params.tone * 2000.0f; // lower base for auto-wah
         const float cutoff  = base_hz + env_val * params.depth * 3000.0f;
-        svf_.SetFreq(cutoff > 8000.0f ? 8000.0f : cutoff);
+        envelope_cutoff_hz_ = cutoff > 8000.0f ? 8000.0f : cutoff;
     }
 
     svf_.Process(input);

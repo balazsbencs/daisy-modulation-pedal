@@ -17,6 +17,7 @@ void FlangerMode::Init() {
 
 void FlangerMode::Reset() {
     s_flanger_line.Reset();
+    lfo_.Reset();
     dc_.Init();
     feedback_ = 0.0f;
 }

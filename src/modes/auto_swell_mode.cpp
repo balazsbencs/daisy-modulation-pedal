@@ -5,7 +5,9 @@
 namespace pedal {
 
 // Small delay buffer for optional chorus shimmer (P2)
-static constexpr size_t kSwellBufSize = 1200;
+static constexpr size_t kSwellBufSize    = 1200;
+// Fixed chorus delay: 580 samples = ~12.08 ms at 48 kHz
+static constexpr float  kSwellChorusDelay = 580.0f;
 static float DSY_SDRAM_BSS s_swell_buf[kSwellBufSize];
 static DelayLineSdram s_swell_line;
 
@@ -17,6 +19,7 @@ void AutoSwellMode::Init() {
 
 void AutoSwellMode::Reset() {
     s_swell_line.Reset();
+    env_.Init(5.0f, 200.0f);
     dc_.Init();
     swell_gain_  = 0.0f;
     swelling_    = false;
@@ -51,7 +54,7 @@ StereoFrame AutoSwellMode::Process(float input, const ParamSet& params) {
 
     // Optional chorus shimmer from P2: blend in a short modulated delay
     if (params.p2 > 0.05f) {
-        const float chorus_delay = 480.0f + 200.0f * 0.5f; // fixed 14ms ish
+        const float chorus_delay = kSwellChorusDelay;
         s_swell_line.Write(wet);
         s_swell_line.SetDelay(chorus_delay);
         const float chorus_wet = s_swell_line.Read();

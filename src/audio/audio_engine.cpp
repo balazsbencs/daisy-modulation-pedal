@@ -101,8 +101,8 @@ void AudioEngine::ProcessBlock(AudioHandle::InputBuffer  in,
             // never need to know about the dry path.
             const StereoFrame wet = mode->Process(dry, params);
 
-            OUT_L[i] = dry * mix_dry_ + wet.left  * mix_wet_;
-            OUT_R[i] = dry * mix_dry_ + wet.right * mix_wet_;
+            OUT_L[i] = (dry * mix_dry_ + wet.left  * mix_wet_) * params.level;
+            OUT_R[i] = (dry * mix_dry_ + wet.right * mix_wet_) * params.level;
         }
     }
 }
