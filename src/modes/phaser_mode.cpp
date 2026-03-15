@@ -25,13 +25,15 @@ void PhaserMode::Prepare(const ParamSet& params) {
     const int sub = static_cast<int>(params.p2 * 6.999f);
     num_stages_ = kStageCounts[sub];
 
-    // LFO output sweeps allpass coefficient
-    // tone biases the center: 0=low center, 1=high center
-    // depth controls sweep range
+    // Negative allpass coefficients place the phase-shift notch in the audio band.
+    // For H(z)=(a+z⁻¹)/(1+a·z⁻¹) cascaded N times, the notch of (dry+wet)
+    // falls at cos(ω) = -2a/(1+a²). Positive a pushes the notch near Nyquist;
+    // negative a puts it in the 300 Hz – 12 kHz phaser sweet spot.
+    // center: tone=0 → -0.95 (notch ~300 Hz), tone=1 → -0.10 (notch ~10 kHz)
     const float lfo_val = lfo_.PrepareBlock(); // -1..+1
-    const float center  = 0.1f + params.tone * 0.7f;   // 0.1..0.8
+    const float center  = -(0.95f - params.tone * 0.85f);
     lfo_coeff_ = center + params.depth * 0.4f * lfo_val;
-    if (lfo_coeff_ >  0.99f) lfo_coeff_ =  0.99f;
+    if (lfo_coeff_ > -0.01f) lfo_coeff_ = -0.01f;
     if (lfo_coeff_ < -0.99f) lfo_coeff_ = -0.99f;
 }
 
