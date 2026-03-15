@@ -1,8 +1,8 @@
-# Daisy Delay — User Manual
+# Daisy Modulation Pedal — User Manual
 
 ## Overview
 
-Daisy Delay is a stereo delay pedal built on the Electrosmith Daisy Seed platform. It features 10 delay modes, 7 parameters with a shift layer, 8 preset slots, tap tempo, MIDI control (USB + TRS), and a true bypass relay.
+Daisy Modulation is a stereo modulation effects pedal with 12 modes covering chorus, flanger, rotary, vibe, phaser, filter, formant, tremolo, AutoSwell, bit destruction, and quadrature synthesis. Controls include 4 parameter encoders with a shift layer, a mode encoder, two footswitches, an OLED display, 8 preset slots, tap tempo, and full MIDI control via USB and TRS.
 
 ---
 
@@ -13,349 +13,460 @@ Daisy Delay is a stereo delay pedal built on the Electrosmith Daisy Seed platfor
 There are five rotary encoders, each with a push button.
 
 **Mode Encoder** (leftmost)
-- Twist to cycle through the 10 delay modes (wraps around)
-- Press and hold to enter the shift layer (see below)
+- Twist to cycle through the 12 modes
+- Press and hold to enter the shift layer (access P1, P2, Level)
 
-**Parameter Encoders** (4 encoders)
-- Without holding mode encoder: control the primary 4 parameters
-- While holding mode encoder: control the shift-layer 3 parameters
+**Parameter Encoders 1–4**
 
 | Layer | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 |-------|-----------|-----------|-----------|-----------|
-| Primary | Time | Repeats | Mix | Filter |
-| Shift (hold mode) | Grit | Mod Speed | Mod Depth | — |
+| Primary (no hold) | Speed | Depth | Mix | Tone |
+| Shift (hold mode) | P1 | P2 | Level | — |
 
-**Fast Turning**: Twisting an encoder quickly (within 40 ms of the previous detent) increases the step size from 0.5% to 1.5% per detent, allowing faster sweeps without overshooting.
+**Fast Turning**: Twisting quickly (within 40 ms of the previous detent) increases step size from 0.5% to 1.5% per detent.
 
 ---
 
 ### Footswitches
 
 **Bypass Footswitch**
-Toggles true bypass. The relay clicks audibly. The bypass LED is lit when the effect is active, off when bypassed. The pedal boots in bypass mode until fully initialized.
+Toggles true bypass. The relay clicks audibly. The bypass LED is lit when the effect is active.
 
 **Tap / Preset Footswitch**
-Behavior depends on whether the mode encoder button is held:
 
-| Mode encoder button | Short press | Long press (≥700 ms) |
-|---------------------|-------------|----------------------|
-| Not held | Tap tempo | — |
-| Held | Load preset | Save preset |
+| Mode encoder held? | Short press | Long press (≥700 ms) |
+|--------------------|-------------|----------------------|
+| No | Tap tempo | — |
+| Yes | Load preset | Save preset |
 
 ---
 
 ### Display
 
-The OLED (128×64) updates at ~30 fps and shows:
+The OLED (128×64) shows:
 - Current mode name
-- Parameter level bars for all visible parameters
+- Parameter level bars
 - Bypass status
 - Tempo source: **Pot**, **Tap**, or **MIDI**
 - Current BPM when tap or MIDI clock is active
-- Preset slot (P1–P8) when selecting presets
-- Confirmation message after saving or loading a preset
+- Preset slot (P1–P8) during preset selection
+- Confirmation after saving or loading a preset
 
 ---
 
 ## Parameters
 
-All parameters are normalized internally as `[0, 1]` and mapped to physical units for DSP. Encoders and MIDI CC both address the same normalized values.
+All modes share the same 7 parameters. Each parameter flows as a normalized value internally and is mapped to physical units for DSP.
 
-### Time
-**Range**: 60 ms – 2500 ms (2 ms – 2500 ms in Lo-Fi mode)
-**Curve**: Logarithmic — more resolution at short times
-**MIDI CC**: 14
+| # | Name | Primary Encoder | Physical Range | Notes |
+|---|------|-----------------|----------------|-------|
+| 0 | **Speed** | Enc 1 | Mode-dependent | LFO rate, attack time, decimation rate, or carrier frequency |
+| 1 | **Depth** | Enc 2 | 0–1 | Modulation intensity |
+| 2 | **Mix** | Enc 3 | 0–1 | Constant-power wet/dry crossfade |
+| 3 | **Tone** | Enc 4 | 0–1 | Post-effect filter: 0 = LP (dark), 0.5 = flat, 1 = HP (bright) |
+| 4 | **P1** | Enc 1 (shift) | Mode-dependent | Mode-specific parameter 1 |
+| 5 | **P2** | Enc 2 (shift) | Mode-dependent | Sub-mode select or mode-specific parameter 2 |
+| 6 | **Level** | Enc 3 (shift) | 0–2× (0 to +6 dB) | Output gain; unity at 50% |
 
-Sets the delay line length. When tap tempo or MIDI clock is active, this parameter is overridden by the computed beat period. The pot/encoder still holds its position and resumes control when tempo lock expires.
+### Speed by Mode
 
-### Repeats
-**Range**: 0 – 0.98
-**Curve**: Linear
-**MIDI CC**: 15
+Speed is repurposed in three modes:
 
-Controls feedback amount. At 0.98 the delay self-oscillates (infinite repeats). Fully clockwise approaches but never quite reaches infinite feedback to prevent runaway.
-
-### Mix
-**Range**: 0 (dry only) – 1.0 (wet only)
-**Curve**: Linear, constant-power crossfade
-**MIDI CC**: 16
-
-Blends the dry signal with the wet (delay) signal. The constant-power curve preserves perceived loudness at the 50% midpoint.
-
-### Filter
-**Range**: 0 – 1.0
-**Curve**: Linear
-**MIDI CC**: 17
-
-Tone control on the delay output. At 0.5 the filter is neutral. Below 0.5 it progressively low-passes (darkens) the repeats; above 0.5 it high-passes (thins) them.
-
-### Grit
-**Range**: 0 – 1.0
-**Curve**: Linear
-**MIDI CC**: 18
-
-A mode-specific character control. Its exact effect varies by mode — see the mode descriptions below.
-
-### Mod Speed
-**Range**: 0.05 – 10.0 Hz
-**Curve**: Logarithmic — more resolution at slow rates
-**MIDI CC**: 19
-
-LFO rate for modulation effects. In Swell mode this controls envelope attack time instead.
-
-### Mod Depth
-**Range**: 0 – 1.0
-**Curve**: Linear
-**MIDI CC**: 20
-
-Controls how much the LFO (or envelope) affects the signal. The exact target varies by mode.
+| Mode | Speed controls | Range |
+|------|---------------|-------|
+| AutoSwell | Attack time | 10–500 ms |
+| Destroyer | Decimation rate | 1× – 48× |
+| Quadrature | Carrier frequency | 0.5–2000 Hz |
+| All others | LFO rate | 0.05–10 Hz (mode-specific max) |
 
 ---
 
-## Delay Modes
+## Modes
 
-Modes are selected by twisting the mode encoder. There are 10 modes total. All modes output wet signal only; the audio engine applies the Mix crossfade.
-
-### 0 — Duck
-The wet signal ducks (attenuates) when the input is loud, then swells back up in silences. Useful for keeping repeats audible between notes without cluttering busy playing.
-
-| Parameter | Function |
-|-----------|----------|
-| Time | Delay time |
-| Repeats | Feedback |
-| Filter | Tone |
-| **Grit** | Duck depth (0 = no ducking, 1 = maximum) |
-| Mod Speed | LFO rate |
-| Mod Depth | Delay time modulation depth |
+Modes are selected by twisting the mode encoder. All modes output wet signal only — the Mix parameter controls wet/dry blend. Stereo output is produced by all modes.
 
 ---
 
-### 1 — Swell
-An attack-decay envelope is triggered by input peaks, creating soft pad-like volume swells on the repeats.
+### 0 — Chorus
 
-| Parameter | Function |
-|-----------|----------|
-| Time | Delay time |
-| Repeats | Feedback |
-| **Mod Speed** | Attack time (fast knob = short attack) |
-| **Mod Depth** | Decay time |
-| Filter | Not used |
-| Grit | Not used |
+Pitch-modulated delay that thickens and doubles the signal. Five sub-modes from vintage analog to modern digital.
 
----
+| Sub-mode (P2) | Character |
+|---------------|-----------|
+| dBucket (0) | Vintage CE-1/CE-2 — BBD clock noise + HF rolloff |
+| Multi (1) | Wide tri-chorus — 3 taps at 120° LFO offsets |
+| Vibrato (2) | Pure pitch vibrato (100% wet internally) |
+| Detune (3) | Static pitch detuning / doubler, no LFO |
+| Digital (4) | Clean, transparent, no coloration |
 
-### 2 — Trem
-A sine LFO applies tremolo to the wet output, creating rhythmic amplitude pulsing on the repeats. The feedback path is taken before the tremolo so repeat levels stay consistent.
-
-| Parameter | Function |
-|-----------|----------|
-| Time | Delay time |
-| Repeats | Feedback |
-| Filter | Tone |
-| Mod Speed | Tremolo rate |
-| Mod Depth | Tremolo depth |
-| Grit | Not used |
+| Parameter | Function | Range |
+|-----------|----------|-------|
+| Speed | LFO rate | 0.05–5.0 Hz |
+| Depth | Delay modulation depth | 0–1 |
+| Mix | Wet/dry | 0–1 |
+| Tone | Post-chorus filter | LP ↔ HP |
+| P1 | Base delay time | 1–20 ms |
+| P2 | Sub-mode | 0–4 |
+| Level | Output gain | 0–+6 dB |
 
 ---
 
-### 3 — Digital
-Clean, transparent delay with gentle time modulation. The most neutral mode — best for straightforward echo without added color.
+### 1 — Flanger
 
-| Parameter | Function |
-|-----------|----------|
-| Time | Delay time |
-| Repeats | Feedback |
-| Filter | Tone |
-| Mod Speed | LFO rate |
-| Mod Depth | Delay time modulation depth |
-| Grit | Not used |
+Very short modulated delay (0.1–10 ms) mixed with dry signal creates sweeping comb-filter effects. Through-zero modes add jet-engine sweeps.
 
----
+| Sub-mode (P2) | Feedback | Character |
+|---------------|----------|-----------|
+| Silver (0) | +, moderate | Classic subtle flanger |
+| Grey (1) | −, moderate | Hollow, nasal |
+| Black+ (2) | +, high | Intense metallic resonance |
+| Black− (3) | −, high | Deep hollow resonance |
+| Zero+ (4) | +, through-zero | Jet-engine sweep |
+| Zero− (5) | −, through-zero | Inverted jet sweep |
 
-### 4 — DBucket
-Emulates a BBD (bucket-brigade device) analog delay chip. Each repeat progressively loses high-frequency content and picks up clock noise, just like a vintage analog delay.
-
-| Parameter | Function |
-|-----------|----------|
-| Time | Delay time |
-| Repeats | Feedback |
-| **Grit** | HF rolloff steepness AND noise amount (both together) |
-| Mod Speed | Wow/flutter rate |
-| Mod Depth | Wow/flutter depth |
-| Filter | Not used (controlled by Grit) |
-
-With Grit at zero the repeats are relatively bright and quiet. At maximum, repeats darken noticeably and clock noise becomes audible.
+| Parameter | Function | Range |
+|-----------|----------|-------|
+| Speed | LFO rate | 0.01–5.0 Hz |
+| Depth | Sweep range | 0–1 |
+| Mix | Wet/dry | 0–1 |
+| Tone | Post-flanger filter | LP ↔ HP |
+| P1 | Feedback amount | 0–0.95 (sign from sub-mode) |
+| P2 | Sub-mode | 0–5 |
+| Level | Output gain | 0–+6 dB |
 
 ---
 
-### 5 — Tape
-Simulates a tape echo machine with wow/flutter time modulation and progressive soft saturation on the feedback path. Repeats warm and compress as they accumulate.
+### 2 — Rotary
 
-| Parameter | Function |
-|-----------|----------|
-| Time | Delay time |
-| Repeats | Feedback |
-| **Grit** | Saturation drive (0 = clean, 1 = heavy compression/clipping) |
-| Mod Speed | Wow/flutter rate |
-| Mod Depth | Wow/flutter depth |
-| Filter | Tone |
+Leslie rotating speaker simulation. Horn (HF) rotates faster than drum (LF). Doppler pitch shift and amplitude modulation combine for a rich, organic sound.
 
----
+| Parameter | Function | Range |
+|-----------|----------|-------|
+| Speed | Rotor speed (ramp target) | 0.4–7.0 Hz (horn); drum ≈ speed × 0.56 |
+| Depth | Doppler + AM depth | 0–1 |
+| Mix | Wet/dry | 0–1 |
+| Tone | Crossover frequency bias | 0–1 |
+| P1 | Drive (pre-rotor saturation) | 0–1 |
+| P2 | Horn/drum balance | 0 = all drum, 1 = all horn |
+| Level | Output gain | 0–+6 dB |
 
-### 6 — Dual
-Two independent delay lines panned left and right, slightly detuned from each other and animated by the LFO. Creates a wide stereo image and chorus-like shimmer. This is the only mode with true stereo output.
-
-| Parameter | Function |
-|-----------|----------|
-| Time | Left channel delay time |
-| Repeats | Feedback (both channels) |
-| Filter | Tone (both channels) |
-| Mod Speed | LFO rate (animates detune) |
-| Mod Depth | Detune amount (0 = mono-locked, 1 = maximum stereo spread) |
-| Grit | Not used |
+**Tip**: Slow Speed with high Depth and some P1 drive is a classic Hammond organ texture.
 
 ---
 
-### 7 — Pattern
-Three delay taps at rhythmically meaningful intervals, creating syncopated repeating patterns. The base Time sets the beat subdivision; Grit selects the rhythmic pattern.
+### 3 — Vibe
 
-| Parameter | Function |
-|-----------|----------|
-| Time | Base delay (tap 1 timing) |
-| Repeats | Feedback from first tap |
-| **Grit** | Pattern: 0–33% = straight, 33–67% = dotted, 67–100% = triplet |
-| Mod Speed | LFO rate |
-| Mod Depth | Delay time modulation depth |
-| Filter | Tone |
+1960s UniVibe emulation. Four cascaded allpass stages with nonlinear LFO response and simultaneous amplitude modulation create a warmer, throatier character than a standard phaser.
 
-**Patterns**:
-- **Straight**: taps at 1×, 2×, 3× base time
-- **Dotted**: taps at 1×, 1.5×, 3× (swing feel)
-- **Triplet**: taps at 0.67×, 1.33×, 2× (triplet feel)
+| Parameter | Function | Range |
+|-----------|----------|-------|
+| Speed | LFO rate | 0.5–10.0 Hz |
+| Depth | Sweep + AM depth | 0–1 |
+| Mix | Wet/dry | 0–1 |
+| Tone | Post-vibe filter | LP ↔ HP |
+| P1 | Intensity (regen/feedback) | 0–0.8 |
+| P2 | Chorus/Vibrato blend | 0 = chorus, 1 = vibrato |
+| Level | Output gain | 0–+6 dB |
 
-Works especially well with tap tempo — set the beat and let Grit choose the groove.
+P2 at 1.0 forces Mix to 100% wet (pure vibrato). P2 below 1.0 blends dry back in for the classic chorus-vibe sound.
 
 ---
 
-### 8 — Filter
-A resonant state-variable filter sweeps over the repeats, driven by the LFO. At high Mod Depth, the filter approaches self-oscillation, generating pitched tones.
+### 4 — Phaser
 
-| Parameter | Function |
-|-----------|----------|
-| Time | Delay time |
-| Repeats | Feedback |
-| Mod Speed | Filter sweep rate |
-| **Mod Depth** | Sweep depth AND resonance (high = more resonant, can self-oscillate) |
-| Filter | Not used |
-| Grit | Not used |
+Cascaded allpass filters create phase-shift notches that sweep across the frequency spectrum. Stage count controls density; Barber Pole creates an infinite ascending or descending sweep illusion.
 
-**Tip**: Set Repeats high and Mod Depth near maximum for synth-like tonal effects.
+| Sub-mode (P2) | Stages | Character |
+|---------------|--------|-----------|
+| 2-stage (0) | 2 | Subtle, 1 notch |
+| 4-stage (1) | 4 | Classic, 2 notches |
+| 6-stage (2) | 6 | Rich, 3 notches |
+| 8-stage (3) | 8 | Dense, 4 notches |
+| 12-stage (4) | 12 | Lush, 6 notches |
+| 16-stage (5) | 16 | Ultra-dense, 8 notches |
+| Barber Pole (6) | 4+4 | Infinite rising/falling sweep illusion |
 
----
+| Parameter | Function | Range |
+|-----------|----------|-------|
+| Speed | LFO rate | 0.02–8.0 Hz |
+| Depth | Sweep range | 0–1 |
+| Mix | Wet/dry | 0–1 |
+| Tone | Notch center frequency range | LP ↔ HP |
+| P1 | Regeneration (feedback) | 0–0.95 |
+| P2 | Sub-mode | 0–6 |
+| Level | Output gain | 0–+6 dB |
 
-### 9 — Lo-Fi
-Bit-crushing and sample-rate reduction are applied to each repeat, progressively degrading audio into crunchy lo-fi territory. Has the shortest minimum time of any mode (2 ms).
-
-| Parameter | Function |
-|-----------|----------|
-| Time | Delay time (2 ms – 2500 ms) |
-| Repeats | Feedback |
-| **Grit** | Bit depth (16-bit at 0 → 4-bit at max) AND decimation factor (1× → 16×) |
-| Mod Speed | LFO rate (triangle wave) |
-| Mod Depth | Delay time modulation depth |
-| Filter | Not used |
-
-Grit is the most dramatic knob in this mode — the first few percent already introduces noticeable artifacts.
+**Barber Pole**: Two independent 4-stage allpass chains run in quadrature (90° LFO offset) and are crossfaded continuously. The result is a phaser sweep that appears to rise (or fall) without ever resetting.
 
 ---
 
-## Presets
+### 5 — Filter
 
-Eight preset slots (P1–P8) are stored in onboard flash and survive power cycles. Each slot saves the current mode and all 7 parameter values.
+Resonant state-variable filter driven by LFO or envelope follower. Three filter types and eight waveshapes cover auto-wah through synth-style sweeps.
 
-### Selecting a Slot
-Hold the mode encoder button and twist the mode encoder. The display shows the current slot (P1–P8).
+**Filter type** is set by the sub-mode encoder (separate layer from P2).
 
-### Loading a Preset
-While holding the mode encoder button and with a slot selected, quickly press the tap footswitch. The pedal switches to the saved mode and recalls all parameter values immediately.
+**LFO Waveshape (P2)**:
 
-### Saving a Preset
-While holding the mode encoder button and with a slot selected, hold the tap footswitch for 700 ms or longer. The display shows a confirmation message for 1 second.
+| P2 | Waveshape | Character |
+|----|-----------|-----------|
+| 0 | Sine | Smooth sweep |
+| 1 | Triangle | Linear sweep |
+| 2 | Square | Abrupt toggle |
+| 3 | Ramp Up | Rising sawtooth |
+| 4 | Ramp Down | Falling sawtooth |
+| 5 | S&H | Random step |
+| 6 | Env+ | Auto-wah (pick opens filter) |
+| 7 | Env− | Inverted auto-wah (pick closes filter) |
 
-### Power-On Defaults
-If no valid preset is found in flash (e.g., first power-on), the pedal boots with these defaults:
-
-| Parameter | Default |
-|-----------|---------|
-| Time | 50% |
-| Repeats | 40% |
-| Mix | 50% |
-| Filter | 50% (neutral) |
-| Grit | 0% |
-| Mod Speed | 50% |
-| Mod Depth | 0% |
+| Parameter | Function | Range |
+|-----------|----------|-------|
+| Speed | LFO rate (not used in Env± modes) | 0.02–10.0 Hz |
+| Depth | Sweep range | 0–1 |
+| Mix | Wet/dry | 0–1 |
+| Tone | Base cutoff frequency | 80 Hz–12 kHz |
+| P1 | Resonance (Q) | 0.5–20.0 |
+| P2 | LFO waveshape / envelope | 0–7 |
+| Level | Output gain | 0–+6 dB |
 
 ---
 
-## MIDI
+### 6 — Formant
 
-The pedal accepts MIDI over both **USB** (class-compliant, no driver needed) and **TRS Type A**. Both ports are active simultaneously.
+Dual bandpass SVF filters track vocal formant frequencies (F1, F2), creating talking and singing tones. An LFO morphs between adjacent vowel pairs.
 
-### CC Control
+| Sub-mode (P2) | Vowel | Character |
+|---------------|-------|-----------|
+| AA (0) | "ah" | Open, warm |
+| EE (1) | "ee" | Bright, nasal |
+| EYE (2) | "eye" | Diphthong sweep |
+| OH (3) | "oh" | Round, hollow |
+| OOH (4) | "ooh" | Dark, vocal |
 
-| CC # | Parameter |
-|------|-----------|
-| 14 | Time |
-| 15 | Repeats |
-| 16 | Mix |
-| 17 | Filter |
-| 18 | Grit |
-| 19 | Mod Speed |
-| 20 | Mod Depth |
+| Parameter | Function | Range |
+|-----------|----------|-------|
+| Speed | Morph rate between vowel pair | 0.05–5.0 Hz |
+| Depth | Morph range | 0–1 |
+| Mix | Wet/dry | 0–1 |
+| Tone | Formant frequency shift | ±1 octave |
+| P1 | Bandwidth / resonance | 0 = narrow, 1 = wide |
+| P2 | Vowel pair | 0–4 |
+| Level | Output gain | 0–+6 dB |
 
-CC values 0–127 map linearly to the normalized parameter range 0–1.
+The LFO sweeps between the selected vowel (P2) and the next in sequence (wraps from OOH back to AA).
 
-### Program Change — Mode Select
+---
 
-| PC # | Mode |
-|------|------|
-| 0 | Duck |
-| 1 | Swell |
-| 2 | Trem |
-| 3 | Digital |
-| 4 | DBucket |
-| 5 | Tape |
-| 6 | Dual |
-| 7 | Pattern |
-| 8 | Filter |
-| 9 | Lo-Fi |
+### 7 — Vintage Trem
 
-### MIDI Clock Sync
+Classic amplitude tremolo. Three sub-modes emulate different analog tremolo circuits.
 
-When MIDI Clock (0xF8) messages are received, the Time parameter is locked to the beat period. The display shows **MIDI** as the tempo source. After 2 seconds without a clock pulse, the lock expires and pot/encoder control resumes. MIDI Stop (0xFC) cancels the lock immediately.
+| Sub-mode (P2) | Circuit | Character |
+|---------------|---------|-----------|
+| Tube (0) | Asymmetric bias-shift | Warm, amp-like throb |
+| Harmonic (1) | Dual LFO at f + 2f | Complex pulsing |
+| Photoresistor (2) | Opto-coupler with LDR lag | Smooth, organic swell |
 
-**Priority chain**: MIDI Clock > Tap Tempo > Pot/Encoder
+| Parameter | Function | Range |
+|-----------|----------|-------|
+| Speed | Tremolo rate | 1.0–15.0 Hz |
+| Depth | Volume dip amount | 0–1 |
+| Mix | Wet/dry | 0–1 |
+| Tone | Post-trem filter | LP ↔ HP |
+| P1 | Waveform shape / symmetry | 0–1 |
+| P2 | Sub-mode | 0–2 |
+| Level | Output gain | 0–+6 dB |
 
-### MIDI Learn
+---
 
-1. Hold the mode encoder button
-2. Twist the mode encoder — the pedal enters MIDI Learn for the highlighted parameter
-3. Send any CC from your controller
+### 8 — Pattern Trem
 
-The first CC received is mapped to that parameter. Mappings are session-only and reset on power cycle.
+Rhythmic tremolo with 16 built-in amplitude patterns. Syncs to tap tempo or MIDI clock for groove-locked gating, stutters, and polyrhythms.
+
+| Parameter | Function | Range |
+|-----------|----------|-------|
+| Speed | Pattern rate (overridden by tap/MIDI clock) | 1.0–15.0 Hz |
+| Depth | Pattern depth (0 = no effect, 1 = full gating) | 0–1 |
+| Mix | Wet/dry | 0–1 |
+| Tone | Post-trem filter | LP ↔ HP |
+| P1 | Pattern select | 0–15 (16 built-in patterns) |
+| P2 | Subdivision | 0 = straight, 1 = triplet, 2 = dotted |
+| Level | Output gain | 0–+6 dB |
+
+Patterns include straight 8ths, gallop, tresillo, habanera, samba, and others.
+
+**Tip**: Set Speed with tap tempo and let P1 + P2 dial the groove.
+
+---
+
+### 9 — AutoSwell
+
+Envelope-triggered volume swell that removes the pick attack, producing bowed or pad-like textures. Optional chorus adds shimmer.
+
+The signal logic is inverted from a standard compressor: when input gets loud, gain drops; when input gets quiet, gain rises slowly.
+
+| Parameter | Function | Range |
+|-----------|----------|-------|
+| Speed | Attack time (short = fast swell) | 10–500 ms |
+| Depth | Swell intensity / sensitivity | 0–1 |
+| Mix | Wet/dry | 0–1 |
+| Tone | Post-swell filter | LP ↔ HP |
+| P1 | Release time | 50–2000 ms |
+| P2 | Chorus shimmer amount | 0 = off, 1 = full |
+| Level | Output gain | 0–+6 dB |
+
+**Note**: Tap tempo and MIDI clock do not affect AutoSwell — Speed controls a time constant, not an LFO rate.
+
+---
+
+### 10 — Destroyer
+
+Lo-fi destruction through bitcrushing, sample-rate decimation, and a resonant filter. Speed and Depth are independent controls.
+
+| Parameter | Function | Range |
+|-----------|----------|-------|
+| Speed | Decimation rate (sample-rate divisor) | 1× – 48× (48 kHz → 1 kHz) |
+| Depth | Bit depth reduction | 0 = 16-bit, 1 = 1-bit |
+| Mix | Wet/dry | 0–1 |
+| Tone | LP filter cutoff on crushed signal | 80 Hz–20 kHz |
+| P1 | Filter resonance | 0.5–8.5 Q |
+| P2 | Vinyl noise amount | 0 = none, 1 = max |
+| Level | Output gain | 0–+6 dB |
+
+Speed and Depth are completely independent — you can have extreme bitcrushing with no decimation, or decimation only at full bit depth. The post-LP filter (Tone + P1) shapes the final crushed sound.
+
+**Note**: Tap tempo and MIDI clock do not affect Destroyer — Speed is a decimation multiplier, not an LFO rate.
+
+---
+
+### 11 — Quadrature
+
+Ring modulation, frequency shifting, and AM/FM synthesis using a Hilbert transform for true single-sideband effects. The audio-rate carrier creates sounds from subtle detuning to metallic clangour.
+
+| Sub-mode (P2) | Algorithm | Character |
+|---------------|-----------|-----------|
+| AM (0) | Amplitude mod / ring mod | Metallic, clangorous |
+| FM (1) | Frequency mod at audio rates | Bell-like, inharmonic |
+| FreqShift+ (2) | Upper sideband (Hilbert) | Ascending shift |
+| FreqShift− (3) | Lower sideband (Hilbert) | Descending shift |
+
+| Parameter | Function | Range |
+|-----------|----------|-------|
+| Speed | Carrier frequency | 0.5–2000 Hz |
+| Depth | Modulation depth | 0–1 |
+| Mix | Wet/dry | 0–1 |
+| Tone | Post-mod filter | LP ↔ HP |
+| P1 | Carrier waveform (sine → square blend) | 0–1 |
+| P2 | Sub-mode | 0–3 |
+| Level | Output gain | 0–+6 dB |
+
+At low carrier frequencies (< 20 Hz), AM becomes tremolo and FreqShift becomes subtle detuning. At 20–200 Hz the effect becomes robotic and pitch-shifting. Above 200 Hz metallic and clangorous sounds emerge.
 
 ---
 
 ## Tap Tempo
 
-Press the tap footswitch (without holding the mode encoder button) to tap in a tempo. After 2 or more taps the average interval is computed and the Time parameter is locked to that beat period. Up to 4 taps are averaged for accuracy.
+Press the tap footswitch (without holding the mode encoder) to tap in a tempo. After 2 or more taps the average interval is used to set Speed. Up to 4 taps are averaged.
 
-**BPM range**: 40–240 BPM
-**Timeout**: 2 seconds of inactivity resets the tap state and returns control to the pot/encoder.
+**Timeout**: 2 seconds of inactivity resets the tap state.
 
-The current BPM and source (**Tap**) are shown on the display while active.
+Tap tempo applies to: Chorus, Flanger, Rotary, Vibe, Phaser, Filter, Formant, Vintage Trem, Pattern Trem.
 
-Tap tempo takes priority over pot/encoder control but yields to MIDI Clock if clock messages arrive.
+Tap tempo does **not** apply to: AutoSwell (Speed = attack time), Destroyer (Speed = decimation rate), Quadrature (Speed = carrier frequency).
+
+**Priority chain**: MIDI Clock > Tap Tempo > Encoder
+
+---
+
+## Presets
+
+Eight preset slots (P1–P8) store mode + all 7 normalized parameter values in onboard QSPI flash. Presets survive power cycles.
+
+### Selecting a Slot
+Hold the mode encoder button and twist the mode encoder. The display shows the current slot.
+
+### Loading a Preset
+With a slot selected (mode encoder held), quickly press the tap footswitch.
+
+### Saving a Preset
+With a slot selected (mode encoder held), hold the tap footswitch for ≥ 700 ms. The display confirms the save.
+
+### Power-On Defaults
+If no valid preset is found in flash, the pedal boots with these defaults:
+
+| Parameter | Default |
+|-----------|---------|
+| Speed | 30% |
+| Depth | 50% |
+| Mix | 50% |
+| Tone | 50% (flat) |
+| P1 | 0% |
+| P2 | 0% |
+| Level | 50% (unity) |
+
+---
+
+## MIDI
+
+The pedal accepts MIDI over **USB** (class-compliant, no driver needed) and **TRS Type A**. Both ports are active simultaneously.
+
+### CC Map
+
+| CC | Parameter |
+|----|-----------|
+| 14 | Speed |
+| 15 | Depth |
+| 16 | Mix |
+| 17 | Tone |
+| 18 | P1 |
+| 19 | P2 |
+| 20 | Level |
+
+CC values 0–127 map linearly to normalized 0–1 for each parameter.
+
+### Program Change — Mode Select
+
+| PC | Mode |
+|----|------|
+| 0 | Chorus |
+| 1 | Flanger |
+| 2 | Rotary |
+| 3 | Vibe |
+| 4 | Phaser |
+| 5 | Filter |
+| 6 | Formant |
+| 7 | Vintage Trem |
+| 8 | Pattern Trem |
+| 9 | AutoSwell |
+| 10 | Destroyer |
+| 11 | Quadrature |
+
+### MIDI Clock Sync
+
+When MIDI Clock (0xF8) messages are received, Speed is locked to the beat period (in Hz). The display shows **MIDI** as the tempo source. Lock expires 2 seconds after the last tick. MIDI Stop (0xFC) cancels immediately.
+
+Applies to: Chorus, Flanger, Rotary, Vibe, Phaser, Filter, Formant, Vintage Trem, Pattern Trem.
+Does **not** apply to: AutoSwell, Destroyer, Quadrature.
+
+### MIDI Learn
+
+1. Hold the mode encoder button and twist any parameter encoder — the pedal enters MIDI Learn for that parameter.
+2. Send any CC from your controller.
+3. That CC is now mapped to the parameter.
+
+Mappings reset on power cycle.
+
+---
+
+## VST Plugin
+
+A VST3 and Standalone version is available in `desktop/vst/`. It uses the same DSP code as the firmware and adds:
+
+- All 12 modes and 7 parameters as APVTS knobs
+- Tempo sync to host BPM with subdivision selector (1/1, 1/2, 1/4., 1/4, 1/8., 1/8, 1/8T, 1/16)
+- Stereo output on all modes
+
+See the [README](README.md) for build instructions.
 
 ---
 
@@ -367,33 +478,37 @@ Tap tempo takes priority over pot/encoder control but yields to MIDI Clock if cl
 | Bit depth | 24-bit |
 | Block size | 48 samples (1 ms) |
 | Input | Mono |
-| Output | Stereo (true stereo in Dual mode; L=R in all other modes) |
-| Max delay time | 2500 ms |
+| Output | Stereo (all modes) |
 | Bypass | True (relay) |
 
 ---
 
 ## Quick Reference
 
-### Parameter Cheat Sheet
-
-| Parameter | Duck | Swell | Trem | Digital | DBucket | Tape | Dual | Pattern | Filter | Lo-Fi |
-|-----------|------|-------|------|---------|---------|------|------|---------|--------|-------|
-| Time | delay | delay | delay | delay | delay | delay | L delay | base | delay | delay (2ms min) |
-| Repeats | fbk | fbk | fbk | fbk | fbk | fbk | fbk | fbk | fbk | fbk |
-| Mix | wet/dry | wet/dry | wet/dry | wet/dry | wet/dry | wet/dry | wet/dry | wet/dry | wet/dry | wet/dry |
-| Filter | tone | — | tone | tone | — | tone | tone | tone | — | — |
-| **Grit** | **duck depth** | — | — | — | **HF + noise** | **saturation** | — | **pattern** | — | **bits + decim** |
-| Mod Speed | LFO rate | attack | trem rate | LFO rate | flutter | flutter | LFO rate | LFO rate | sweep rate | LFO rate |
-| Mod Depth | time mod | decay | trem depth | time mod | flutter | flutter | stereo width | time mod | resonance | time mod |
-
-### Footswitch Quick Reference
+### Footswitch Summary
 
 | Action | Result |
 |--------|--------|
-| Tap bypass footswitch | Toggle effect on/off |
+| Tap bypass | Toggle effect on/off |
 | Tap tap footswitch | Tap tempo |
 | Hold mode encoder + twist mode encoder | Select preset slot P1–P8 |
 | Hold mode encoder + tap tap footswitch | Load selected preset |
-| Hold mode encoder + hold tap footswitch (700ms) | Save to selected preset |
-| Twist mode encoder (no hold) | Change delay mode |
+| Hold mode encoder + hold tap footswitch (700 ms) | Save to selected preset |
+| Twist mode encoder | Change mode |
+
+### Parameter Cheat Sheet
+
+| Mode | Speed | Depth | Tone | P1 | P2 |
+|------|-------|-------|------|----|----|
+| Chorus | LFO rate | delay mod | filter | base delay | sub-mode |
+| Flanger | LFO rate | sweep | filter | feedback | sub-mode |
+| Rotary | rotor speed | doppler+AM | crossover | drive | horn/drum |
+| Vibe | LFO rate | sweep+AM | filter | regen | chorus blend |
+| Phaser | LFO rate | sweep | notch freq | regen | sub-mode |
+| Filter | LFO rate | sweep | cutoff | resonance | waveshape |
+| Formant | morph rate | morph range | freq shift | bandwidth | vowel |
+| Vintage Trem | rate | depth | filter | shape | sub-mode |
+| Pattern Trem | rate | depth | filter | pattern | subdivision |
+| AutoSwell | attack time | sensitivity | filter | release | chorus amt |
+| Destroyer | decimation | bit depth | cutoff | resonance | vinyl noise |
+| Quadrature | carrier Hz | mod depth | filter | waveform | sub-mode |
