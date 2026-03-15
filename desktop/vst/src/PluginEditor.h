@@ -4,11 +4,11 @@
 #include "PluginProcessor.h"
 #include <array>
 
-class DelayPluginEditor : public juce::AudioProcessorEditor,
-                          public juce::Timer {
+class ModulationPluginEditor : public juce::AudioProcessorEditor,
+                               public juce::Timer {
 public:
-    explicit DelayPluginEditor(DelayPluginProcessor&);
-    ~DelayPluginEditor() override;
+    explicit ModulationPluginEditor(ModulationPluginProcessor&);
+    ~ModulationPluginEditor() override;
 
     void paint(juce::Graphics&) override;
     void resized() override;
@@ -25,7 +25,7 @@ private:
         std::unique_ptr<SliderAttachment> attach;
     };
 
-    DelayPluginProcessor& processor_;
+    ModulationPluginProcessor& processor_;
 
     std::array<Knob, 7> knobs_;
     juce::ComboBox mode_box_;
@@ -42,5 +42,5 @@ private:
     juce::Label    subdiv_label_;
     std::unique_ptr<ComboAttachment> subdiv_attach_;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DelayPluginEditor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ModulationPluginEditor)
 };

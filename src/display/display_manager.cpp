@@ -27,7 +27,7 @@ void DisplayManager::Init() {
 // Update (rate-limited entry point)
 // ---------------------------------------------------------------------------
 
-void DisplayManager::Update(DelayModeId      mode,
+void DisplayManager::Update(ModModeId        mode,
                              const ParamSet&  params,
                              const Bypass&    bypass,
                              const TempoSync& tempo,
@@ -46,7 +46,7 @@ void DisplayManager::Update(DelayModeId      mode,
 // Render
 // ---------------------------------------------------------------------------
 
-void DisplayManager::Render(DelayModeId      mode,
+void DisplayManager::Render(ModModeId        mode,
                              const ParamSet&  params,
                              const Bypass&    bypass,
                              const TempoSync& tempo,
@@ -71,41 +71,41 @@ void DisplayManager::Render(DelayModeId      mode,
     // --- Horizontal separator ---
     oled_.DrawLine(0, layout::SEP_Y, layout::SCREEN_W - 1, layout::SEP_Y, true);
 
-    // --- Row 1 labels: Time | Repeats | Mix ---
+    // --- Row 1 labels: Speed | Depth | Mix ---
     oled_.SetCursor(0,  layout::PARAM_ROW1_Y);
-    oled_.WriteString("Tm", Font_6x8, true);
+    oled_.WriteString("Spd", Font_6x8, true);
     oled_.SetCursor(43, layout::PARAM_ROW1_Y);
-    oled_.WriteString("Rp", Font_6x8, true);
+    oled_.WriteString("Dpt", Font_6x8, true);
     oled_.SetCursor(86, layout::PARAM_ROW1_Y);
     oled_.WriteString("Mx", Font_6x8, true);
 
     // --- Row 1 bars (width 38 px each) ---
-    // time: 0..3 s → normalise to [0,1]
-    DrawParamBar(0,  layout::BAR_Y1_TOP, 38, params.time / 3.0f);
-    // repeats: 0..0.98 → normalise to [0,1]
-    DrawParamBar(43, layout::BAR_Y1_TOP, 38, params.repeats / 0.98f);
+    // speed: 0.05..10 Hz → normalise to [0,1]
+    DrawParamBar(0,  layout::BAR_Y1_TOP, 38, params.speed / 10.0f);
+    // depth: already [0,1]
+    DrawParamBar(43, layout::BAR_Y1_TOP, 38, params.depth);
     // mix: already [0,1]
     DrawParamBar(86, layout::BAR_Y1_TOP, 38, params.mix);
 
-    // --- Row 2 labels: Filter | Grit | ModSpd | ModDep ---
+    // --- Row 2 labels: Tone | P1 | P2 | Level ---
     oled_.SetCursor(0,  layout::PARAM_ROW2_Y);
-    oled_.WriteString("Fi", Font_6x8, true);
+    oled_.WriteString("Tn", Font_6x8, true);
     oled_.SetCursor(32, layout::PARAM_ROW2_Y);
-    oled_.WriteString("Gr", Font_6x8, true);
+    oled_.WriteString("P1", Font_6x8, true);
     oled_.SetCursor(64, layout::PARAM_ROW2_Y);
-    oled_.WriteString("MS", Font_6x8, true);
+    oled_.WriteString("P2", Font_6x8, true);
     oled_.SetCursor(96, layout::PARAM_ROW2_Y);
-    oled_.WriteString("MD", Font_6x8, true);
+    oled_.WriteString("Lv", Font_6x8, true);
 
     // --- Row 2 bars (width 28 px each) ---
-    // filter: [0,1]
-    DrawParamBar(0,  layout::BAR_Y2_TOP, 28, params.filter);
-    // grit: [0,1]
-    DrawParamBar(32, layout::BAR_Y2_TOP, 28, params.grit);
-    // mod_spd: 0.05..10 Hz → normalise to [0,1]
-    DrawParamBar(64, layout::BAR_Y2_TOP, 28, params.mod_spd / 10.0f);
-    // mod_dep: [0,1]
-    DrawParamBar(96, layout::BAR_Y2_TOP, 28, params.mod_dep);
+    // tone: [0,1]
+    DrawParamBar(0,  layout::BAR_Y2_TOP, 28, params.tone);
+    // p1: [0,1]
+    DrawParamBar(32, layout::BAR_Y2_TOP, 28, params.p1);
+    // p2: [0,1]
+    DrawParamBar(64, layout::BAR_Y2_TOP, 28, params.p2);
+    // level: 0..2 → normalise to [0,1]
+    DrawParamBar(96, layout::BAR_Y2_TOP, 28, params.level / 2.0f);
 
     // --- Tempo source label (bottom-left) ---
     oled_.SetCursor(layout::TEMPO_X, layout::TEMPO_Y);
@@ -160,19 +160,21 @@ void DisplayManager::DrawParamBar(uint8_t x, uint8_t y, uint8_t w, float val) {
 // ModeName
 // ---------------------------------------------------------------------------
 
-const char* DisplayManager::ModeName(DelayModeId id) {
+const char* DisplayManager::ModeName(ModModeId id) {
     switch (id) {
-        case DelayModeId::Duck:    return "Duck";
-        case DelayModeId::Swell:   return "Swll";
-        case DelayModeId::Trem:    return "Trem";
-        case DelayModeId::Digital: return "Digi";
-        case DelayModeId::Dbucket: return "BBD";
-        case DelayModeId::Tape:    return "Tape";
-        case DelayModeId::Dual:    return "Dual";
-        case DelayModeId::Pattern: return "Patt";
-        case DelayModeId::Filter:  return "Filt";
-        case DelayModeId::Lofi:    return "LoFi";
-        default:                   return "????";
+        case ModModeId::Chorus:     return "Chrs";
+        case ModModeId::Flanger:    return "Flgr";
+        case ModModeId::Rotary:     return "Rota";
+        case ModModeId::Vibe:       return "Vibe";
+        case ModModeId::Phaser:     return "Phsr";
+        case ModModeId::Filter:     return "Filt";
+        case ModModeId::Formant:    return "Form";
+        case ModModeId::VintTrem:   return "VTrm";
+        case ModModeId::PattTrem:   return "PTrm";
+        case ModModeId::AutoSwell:  return "ASwl";
+        case ModModeId::Destroyer:  return "Dstr";
+        case ModModeId::Quadrature: return "Quad";
+        default:                    return "????";
     }
 }
 

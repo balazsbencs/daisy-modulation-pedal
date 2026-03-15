@@ -4,15 +4,15 @@
 namespace pedal {
 
 // Immutable snapshot of all 7 parameters, taken each audio block.
-// All values are in physical units (seconds, 0-1 scalars, Hz, etc.)
+// All values are in physical units (Hz, 0-1 scalars, etc.)
 struct ParamSet {
-    float time;     // delay time in seconds (0.06..2.5; Lo-Fi: 0.002..2.5)
-    float repeats;  // feedback 0..0.98
-    float mix;      // wet/dry 0..1
-    float filter;   // filter position 0..1 (0.5=flat, <0.5=LP, >0.5=HP)
-    float grit;     // dirt/saturation amount 0..1
-    float mod_spd;  // modulation rate in Hz 0.05..10
-    float mod_dep;  // modulation depth 0..1
+    float speed;   // LFO rate in Hz (or mode-specific)
+    float depth;   // modulation depth 0..1
+    float mix;     // wet/dry 0..1
+    float tone;    // filter position 0..1 (0.5=flat)
+    float p1;      // mode-specific parameter 1
+    float p2;      // mode-specific parameter 2
+    float level;   // output gain 0..2 (unity at 1.0)
 
     // Accessor by id
     float get(ParamId id) const;

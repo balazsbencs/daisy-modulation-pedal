@@ -4,26 +4,26 @@ namespace pedal {
 
 float ParamSet::get(ParamId id) const {
     switch (id) {
-        case ParamId::Time:    return time;
-        case ParamId::Repeats: return repeats;
-        case ParamId::Mix:     return mix;
-        case ParamId::Filter:  return filter;
-        case ParamId::Grit:    return grit;
-        case ParamId::ModSpd:  return mod_spd;
-        case ParamId::ModDep:  return mod_dep;
-        default:               return 0.0f;
+        case ParamId::Speed: return speed;
+        case ParamId::Depth: return depth;
+        case ParamId::Mix:   return mix;
+        case ParamId::Tone:  return tone;
+        case ParamId::P1:    return p1;
+        case ParamId::P2:    return p2;
+        case ParamId::Level: return level;
+        default:             return 0.0f;
     }
 }
 
 ParamSet ParamSet::make_default() {
     return ParamSet{
-        .time     = 0.5f,
-        .repeats  = 0.4f,
-        .mix      = 0.5f,
-        .filter   = 0.5f,
-        .grit     = 0.0f,
-        .mod_spd  = 0.5f,
-        .mod_dep  = 0.0f,
+        .speed = 0.5f,
+        .depth = 0.5f,
+        .mix   = 0.5f,
+        .tone  = 0.5f,
+        .p1    = 0.0f,
+        .p2    = 0.0f,
+        .level = 1.0f,
     };
 }
 

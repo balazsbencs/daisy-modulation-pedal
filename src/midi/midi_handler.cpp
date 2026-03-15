@@ -12,13 +12,13 @@ void MidiLearn::Init() {
     active_      = false;
     param_index_ = -1;
     // Restore default CC map.
-    cc_map_[0] = CC_TIME;
-    cc_map_[1] = CC_REPEATS;
+    cc_map_[0] = CC_SPEED;
+    cc_map_[1] = CC_DEPTH;
     cc_map_[2] = CC_MIX;
-    cc_map_[3] = CC_FILTER;
-    cc_map_[4] = CC_GRIT;
-    cc_map_[5] = CC_MOD_SPD;
-    cc_map_[6] = CC_MOD_DEP;
+    cc_map_[3] = CC_TONE;
+    cc_map_[4] = CC_P1;
+    cc_map_[5] = CC_P2;
+    cc_map_[6] = CC_LEVEL;
 }
 
 void MidiLearn::Start(int param_index) {
@@ -99,8 +99,8 @@ void MidiHandlerPedal::ProcessEvent(const MidiEvent& ev, MidiState& state) {
         }
 
         case ProgramChange:
-            // Only the first 10 programs map to delay modes.
-            if (ev.data[0] < 10) {
+            // Map program numbers to modulation modes (0..11).
+            if (ev.data[0] < NUM_MODES) {
                 state.program_change = static_cast<int>(ev.data[0]);
             }
             break;

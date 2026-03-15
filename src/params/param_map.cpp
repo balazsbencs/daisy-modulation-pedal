@@ -2,22 +2,17 @@
 
 namespace pedal {
 
-const ParamRange& get_param_range(DelayModeId mode, ParamId param) {
-    if (param == ParamId::Time) {
-        switch (mode) {
-            case DelayModeId::Lofi: return default_ranges::TIME_LOFI;
-            default:                return default_ranges::TIME;
-        }
-    }
+const ParamRange& get_param_range(ModModeId mode, ParamId param) {
+    (void)mode; // per-mode overrides will be added as modes are implemented
     switch (param) {
-        case ParamId::Time:    return default_ranges::TIME;
-        case ParamId::Repeats: return default_ranges::REPEATS;
-        case ParamId::Mix:     return default_ranges::MIX;
-        case ParamId::Filter:  return default_ranges::FILTER;
-        case ParamId::Grit:    return default_ranges::GRIT;
-        case ParamId::ModSpd:  return default_ranges::MOD_SPD;
-        case ParamId::ModDep:  return default_ranges::MOD_DEP;
-        default:               return default_ranges::MIX; // unreachable; all ParamId values listed above
+        case ParamId::Speed: return default_ranges::SPEED;
+        case ParamId::Depth: return default_ranges::DEPTH;
+        case ParamId::Mix:   return default_ranges::MIX;
+        case ParamId::Tone:  return default_ranges::TONE;
+        case ParamId::P1:    return default_ranges::P1;
+        case ParamId::P2:    return default_ranges::P2;
+        case ParamId::Level: return default_ranges::LEVEL;
+        default:             return default_ranges::MIX;
     }
 }
 

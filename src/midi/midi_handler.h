@@ -1,7 +1,6 @@
 #pragma once
 #include "daisy_seed.h"
 #include "../config/constants.h"
-#include "../config/delay_mode_id.h"
 #include <cstdint>
 
 namespace pedal {
@@ -9,7 +8,7 @@ namespace pedal {
 /// Aggregated MIDI state produced each main-loop poll.
 /// Consumers should treat each field as a one-shot event unless noted.
 struct MidiState {
-    /// Normalised CC values [0, 1] indexed by parameter (0 = Time … 6 = ModDep).
+    /// Normalised CC values [0, 1] indexed by parameter (0 = Speed … 6 = Level).
     float cc_normalized[NUM_PARAMS]{};
 
     /// True for each slot where a CC message was received this poll cycle.
@@ -17,7 +16,7 @@ struct MidiState {
     /// value of 0 is a valid MIDI CC state.
     bool cc_received[NUM_PARAMS]{};
 
-    /// -1 when no Program Change was received, otherwise 0..9.
+    /// -1 when no Program Change was received, otherwise 0..11.
     int  program_change = -1;
 
     /// True for exactly one poll when a MIDI Clock (0xF8) pulse arrives.
@@ -52,7 +51,7 @@ private:
     bool    active_      = false;
     int     param_index_ = -1;
     uint8_t cc_map_[NUM_PARAMS]
-        = {CC_TIME, CC_REPEATS, CC_MIX, CC_FILTER, CC_GRIT, CC_MOD_SPD, CC_MOD_DEP};
+        = {CC_SPEED, CC_DEPTH, CC_MIX, CC_TONE, CC_P1, CC_P2, CC_LEVEL};
 };
 
 /// Polls both UART and USB MIDI interfaces and converts incoming events into

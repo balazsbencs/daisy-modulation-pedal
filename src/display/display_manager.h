@@ -2,7 +2,7 @@
 #include "daisy_seed.h"
 #include "dev/oled_ssd130x.h"
 #include "hid/disp/oled_display.h"
-#include "../config/delay_mode_id.h"
+#include "../config/mod_mode_id.h"
 #include "../params/param_set.h"
 #include "../audio/bypass.h"
 #include "../tempo/tempo_sync.h"
@@ -27,12 +27,12 @@ public:
 
     /// Call once per main loop iteration.
     /// Skips the redraw when called more frequently than DISPLAY_UPDATE_MS.
-    /// @param mode    Currently active delay mode.
+    /// @param mode    Currently active modulation mode.
     /// @param params  Immutable parameter snapshot for the current block.
     /// @param bypass  Bypass state.
     /// @param tempo   Tempo source state (MIDI / Tap).
     /// @param now_ms  Current time from System::GetNow().
-    void Update(DelayModeId     mode,
+    void Update(ModModeId       mode,
                 const ParamSet& params,
                 const Bypass&   bypass,
                 const TempoSync& tempo,
@@ -43,7 +43,7 @@ public:
 
 private:
     /// Full-screen redraw — always sends a fresh frame to the display.
-    void Render(DelayModeId      mode,
+    void Render(ModModeId        mode,
                 const ParamSet&  params,
                 const Bypass&    bypass,
                 const TempoSync& tempo,
@@ -58,8 +58,8 @@ private:
     /// @param val Fill fraction in [0, 1]; clamped internally.
     void DrawParamBar(uint8_t x, uint8_t y, uint8_t w, float val);
 
-    /// Map a DelayModeId to its short display name.
-    static const char* ModeName(DelayModeId id);
+    /// Map a ModModeId to its short display name.
+    static const char* ModeName(ModModeId id);
 
     OledType oled_;
     uint32_t last_update_ms_ = 0;

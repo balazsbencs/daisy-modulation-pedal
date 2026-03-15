@@ -1,6 +1,6 @@
 #pragma once
-#include "delay_mode.h"
-#include "../config/delay_mode_id.h"
+#include "mod_mode.h"
+#include "../config/mod_mode_id.h"
 #include "../config/constants.h"
 
 namespace pedal {
@@ -8,12 +8,12 @@ namespace pedal {
 class ModeRegistry {
 public:
     void Init();
-    DelayMode* get(DelayModeId id);
-    void Reset(DelayModeId id);
+    ModMode* get(ModModeId id);
+    void Reset(ModModeId id);
 
 private:
     // Pointers to statically allocated mode objects (no heap allocation)
-    DelayMode* modes_[NUM_MODES]{};
+    ModMode* modes_[NUM_MODES]{};
 };
 
 } // namespace pedal

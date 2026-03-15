@@ -8,13 +8,13 @@ constexpr float  SAMPLE_RATE     = 48000.0f;
 constexpr size_t BLOCK_SIZE      = 48;
 constexpr float  INV_SAMPLE_RATE = 1.0f / SAMPLE_RATE;
 
-// Buffer supports up to 3s; delay time range is 60ms–2500ms (2ms min for Lofi)
-constexpr size_t MAX_DELAY_SAMPLES = static_cast<size_t>(SAMPLE_RATE * 3.0f);
+// Modulation delay lines are short (max 20ms for chorus/flanger)
+constexpr size_t MAX_MOD_DELAY_SAMPLES = static_cast<size_t>(SAMPLE_RATE * 0.025f); // 25ms
 
-// Number of delay modes
-constexpr int NUM_MODES = 10;
+// Number of modulation modes
+constexpr int NUM_MODES = 12;
 
-// Number of editable delay parameters.
+// Number of editable parameters.
 constexpr int NUM_PARAMS = 7;
 // Backward-compatible alias for older code paths.
 constexpr int NUM_POTS = NUM_PARAMS;
@@ -34,13 +34,13 @@ constexpr uint32_t PRESET_HOLD_MS      = 700;
 constexpr uint32_t PRESET_STATUS_MS    = 1000;
 
 // MIDI CC defaults (14-20)
-constexpr uint8_t CC_TIME    = 14;
-constexpr uint8_t CC_REPEATS = 15;
-constexpr uint8_t CC_MIX     = 16;
-constexpr uint8_t CC_FILTER  = 17;
-constexpr uint8_t CC_GRIT    = 18;
-constexpr uint8_t CC_MOD_SPD = 19;
-constexpr uint8_t CC_MOD_DEP = 20;
+constexpr uint8_t CC_SPEED = 14;
+constexpr uint8_t CC_DEPTH = 15;
+constexpr uint8_t CC_MIX   = 16;
+constexpr uint8_t CC_TONE  = 17;
+constexpr uint8_t CC_P1    = 18;
+constexpr uint8_t CC_P2    = 19;
+constexpr uint8_t CC_LEVEL = 20;
 
 // Display
 constexpr uint32_t DISPLAY_UPDATE_MS = 33; // ~30fps

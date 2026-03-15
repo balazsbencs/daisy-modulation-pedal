@@ -1,7 +1,7 @@
 #pragma once
 #include "daisy_seed.h"
 #include "../params/param_set.h"
-#include "../config/delay_mode_id.h"
+#include "../config/mod_mode_id.h"
 #include "../config/constants.h"
 
 namespace pedal {

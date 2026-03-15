@@ -3,10 +3,14 @@
 namespace pedal {
 
 static constexpr float TWO_PI = 6.28318530717958647692f;
+static constexpr float PI     = 3.14159265358979323846f;
 
 void Lfo::Init(float rate_hz, LfoWave wave) {
-    phase_ = 0.0f;
-    wave_  = wave;
+    phase_        = 0.0f;
+    phase_offset_ = 0.0f;
+    sh_value_     = 0.0f;
+    rand_         = 12345;
+    wave_         = wave;
     SetRate(rate_hz);
 }
 
@@ -19,27 +23,54 @@ static float lfo_compute(float phase, LfoWave wave) {
         case LfoWave::Sine:
             return fast_sin(phase);
         case LfoWave::Triangle:
-            return (phase < 3.14159265f)
-                ? (-1.0f + phase * (2.0f / 3.14159265f))
-                : ( 3.0f - phase * (2.0f / 3.14159265f));
+            return (phase < PI)
+                ? (-1.0f + phase * (2.0f / PI))
+                : ( 3.0f - phase * (2.0f / PI));
+        case LfoWave::Square:
+            return (phase < PI) ? 1.0f : -1.0f;
+        case LfoWave::RampUp:
+            return -1.0f + phase * (2.0f / TWO_PI);
+        case LfoWave::RampDown:
+            return 1.0f - phase * (2.0f / TWO_PI);
+        case LfoWave::Exponential: {
+            const float s = fast_sin(phase);
+            return (s >= 0.0f) ? (s * s) : -(s * s);
+        }
         default:
-            return 0.0f; // unreachable; silences -Wswitch-default
+            return 0.0f;
     }
 }
 
 float Lfo::Process() {
-    const float out = lfo_compute(phase_, wave_);
+    float out;
+    if (wave_ == LfoWave::SampleAndHold) {
+        out = sh_value_;
+    } else {
+        out = lfo_compute(phase_, wave_);
+    }
     phase_ += phase_inc_;
-    if (phase_ >= TWO_PI) phase_ -= TWO_PI;
+    if (phase_ >= TWO_PI) {
+        phase_ -= TWO_PI;
+        // New S&H sample on cycle wrap
+        rand_     = rand_ * 1664525u + 1013904223u;
+        sh_value_ = static_cast<float>(static_cast<int32_t>(rand_)) * (1.0f / 2147483648.0f);
+    }
     return out;
 }
 
 float Lfo::PrepareBlock() {
-    const float out = lfo_compute(phase_, wave_);
+    float out;
+    if (wave_ == LfoWave::SampleAndHold) {
+        out = sh_value_;
+    } else {
+        out = lfo_compute(phase_, wave_);
+    }
     phase_ += phase_inc_ * static_cast<float>(BLOCK_SIZE);
-    // Use while-loop rather than a single subtract: phase_inc_ * BLOCK_SIZE
-    // can exceed TWO_PI if SetRate() is called with a very high frequency.
-    while (phase_ >= TWO_PI) phase_ -= TWO_PI;
+    while (phase_ >= TWO_PI) {
+        phase_ -= TWO_PI;
+        rand_     = rand_ * 1664525u + 1013904223u;
+        sh_value_ = static_cast<float>(static_cast<int32_t>(rand_)) * (1.0f / 2147483648.0f);
+    }
     return out;
 }
 

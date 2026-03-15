@@ -34,7 +34,7 @@ void AudioEngine::SetParams(const ParamSet& params) {
     param_dirty_ = true;
 }
 
-void AudioEngine::SetMode(DelayMode* mode) {
+void AudioEngine::SetMode(ModMode* mode) {
     daisy::ScopedIrqBlocker irq_block;
     mode_ = mode;
 }
@@ -74,17 +74,15 @@ void AudioEngine::ProcessBlock(AudioHandle::InputBuffer  in,
     }
 
     const ParamSet& params = param_buf_[param_read_idx_];
-    DelayMode*      mode   = mode_;
+    ModMode*        mode   = mode_;
 
     // Constant-power mixing: sin/cos mapping avoids the -3dB dip at 50/50 mix.
     // Recompute only when mix changes; trig is expensive on Cortex-M7.
     if (params.mix != last_mix_) {
-        last_mix_             = params.mix;
-        const float angle     = params.mix * 1.57079632679f; // pi/2
-        mix_dry_              = fast_cos(angle);
-        mix_wet_              = fast_sin(angle);
-        const float gain_sum  = mix_dry_ + mix_wet_;
-        mix_norm_             = (gain_sum > 1.0f) ? (1.0f / gain_sum) : 1.0f;
+        last_mix_ = params.mix;
+        const float angle = params.mix * 1.57079632679f; // pi/2
+        mix_dry_          = fast_cos(angle);
+        mix_wet_          = fast_sin(angle);
     }
 
     if (mode != nullptr && !bypassed_) {
@@ -103,8 +101,8 @@ void AudioEngine::ProcessBlock(AudioHandle::InputBuffer  in,
             // never need to know about the dry path.
             const StereoFrame wet = mode->Process(dry, params);
 
-            OUT_L[i] = (dry * mix_dry_ + wet.left  * mix_wet_) * mix_norm_;
-            OUT_R[i] = (dry * mix_dry_ + wet.right * mix_wet_) * mix_norm_;
+            OUT_L[i] = dry * mix_dry_ + wet.left  * mix_wet_;
+            OUT_R[i] = dry * mix_dry_ + wet.right * mix_wet_;
         }
     }
 }

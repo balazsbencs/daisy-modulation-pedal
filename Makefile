@@ -1,5 +1,5 @@
-# ── Daisy Delay Pedal ─────────────────────────────────────────────────────────
-TARGET = delay
+# ── Daisy Modulation Pedal ────────────────────────────────────────────────────
+TARGET = modulation
 
 # ── Source files ──────────────────────────────────────────────────────────────
 CPP_SOURCES = \
@@ -13,16 +13,9 @@ CPP_SOURCES = \
     src/dsp/envelope_follower.cpp \
     src/dsp/lfo.cpp \
     src/dsp/tone_filter.cpp \
-    src/modes/digital_delay.cpp \
-    src/modes/duck_delay.cpp \
-    src/modes/swell_delay.cpp \
-    src/modes/trem_delay.cpp \
-    src/modes/dbucket_delay.cpp \
-    src/modes/tape_delay.cpp \
-    src/modes/dual_delay.cpp \
-    src/modes/pattern_delay.cpp \
-    src/modes/filter_delay.cpp \
-    src/modes/lofi_delay.cpp \
+    src/modes/chorus_mode.cpp \
+    src/modes/phaser_mode.cpp \
+    src/modes/vintage_trem_mode.cpp \
     src/modes/mode_registry.cpp \
     src/midi/midi_handler.cpp \
     src/display/display_manager.cpp \

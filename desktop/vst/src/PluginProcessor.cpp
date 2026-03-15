@@ -15,17 +15,12 @@ float getParam(const juce::AudioProcessorValueTreeState& apvts, const juce::Stri
 }
 
 float clamp01(float v) {
-    if (v < 0.0f) {
-        return 0.0f;
-    }
-    if (v > 1.0f) {
-        return 1.0f;
-    }
+    if (v < 0.0f) return 0.0f;
+    if (v > 1.0f) return 1.0f;
     return v;
 }
 
-// Tap-subdivision multipliers relative to one quarter-note beat period.
-// Order must match the choice strings added in createParameterLayout().
+// LFO tap-division multipliers relative to one quarter-note beat period.
 constexpr int kNumSubdivisions = 8;
 constexpr float kSubdivisionFactors[kNumSubdivisions] = {
     4.0f,           // 1/1   whole note
@@ -39,7 +34,7 @@ constexpr float kSubdivisionFactors[kNumSubdivisions] = {
 };
 } // namespace
 
-DelayPluginProcessor::DelayPluginProcessor()
+ModulationPluginProcessor::ModulationPluginProcessor()
     : AudioProcessor(BusesProperties()
                          .withInput("Input", juce::AudioChannelSet::stereo(), true)
                          .withOutput("Output", juce::AudioChannelSet::stereo(), true))
@@ -49,66 +44,62 @@ DelayPluginProcessor::DelayPluginProcessor()
     active_mode_->Reset();
 }
 
-void DelayPluginProcessor::prepareToPlay(double, int) {
+void ModulationPluginProcessor::prepareToPlay(double, int) {
     ensureModeFromParam();
     if (active_mode_ != nullptr) {
         active_mode_->Reset();
     }
 }
 
-void DelayPluginProcessor::releaseResources() {}
+void ModulationPluginProcessor::releaseResources() {}
 
-bool DelayPluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
-    if (layouts.getMainInputChannelSet() != juce::AudioChannelSet::stereo()) {
-        return false;
-    }
-    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo()) {
-        return false;
-    }
+bool ModulationPluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
+    if (layouts.getMainInputChannelSet() != juce::AudioChannelSet::stereo()) return false;
+    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo()) return false;
     return true;
 }
 
-pedal::ParamSet DelayPluginProcessor::buildParamsFromState(float host_period_s) const {
+pedal::ParamSet ModulationPluginProcessor::buildParamsFromState(float host_period_s) const {
     using namespace pedal;
 
-    const float n_time = clamp01(getParam(apvts_, "time"));
-    const float n_rep  = clamp01(getParam(apvts_, "repeats"));
-    const float n_mix  = clamp01(getParam(apvts_, "mix"));
-    const float n_fil  = clamp01(getParam(apvts_, "filter"));
-    const float n_grit = clamp01(getParam(apvts_, "grit"));
-    const float n_mspd = clamp01(getParam(apvts_, "modspd"));
-    const float n_mdep = clamp01(getParam(apvts_, "moddep"));
+    // Read normalized [0,1] values from the APVTS using modulation param names.
+    const float n_speed = clamp01(getParam(apvts_, "speed"));
+    const float n_depth = clamp01(getParam(apvts_, "depth"));
+    const float n_mix   = clamp01(getParam(apvts_, "mix"));
+    const float n_tone  = clamp01(getParam(apvts_, "tone"));
+    const float n_p1    = clamp01(getParam(apvts_, "p1"));
+    const float n_p2    = clamp01(getParam(apvts_, "p2"));
+    const float n_level = clamp01(getParam(apvts_, "level"));
 
     ParamSet ps;
     if (host_period_s > 0.0f) {
-        ps.time = juce::jlimit(0.002f, 2.5f, host_period_s);
+        // Tempo sync: convert beat period → LFO speed (Hz)
+        // Clamp to the speed range so the LFO stays sensible.
+        ps.speed = juce::jlimit(0.05f, 10.0f, 1.0f / host_period_s);
     } else {
-        ps.time = map_param(n_time, get_param_range(current_mode_, ParamId::Time));
+        ps.speed = map_param(n_speed, get_param_range(current_mode_, ParamId::Speed));
     }
-    ps.repeats = map_param(n_rep, get_param_range(current_mode_, ParamId::Repeats));
-    ps.mix     = map_param(n_mix, get_param_range(current_mode_, ParamId::Mix));
-    ps.filter  = map_param(n_fil, get_param_range(current_mode_, ParamId::Filter));
-    ps.grit    = map_param(n_grit, get_param_range(current_mode_, ParamId::Grit));
-    ps.mod_spd = map_param(n_mspd, get_param_range(current_mode_, ParamId::ModSpd));
-    ps.mod_dep = map_param(n_mdep, get_param_range(current_mode_, ParamId::ModDep));
+    ps.depth = map_param(n_depth, get_param_range(current_mode_, ParamId::Depth));
+    ps.mix   = map_param(n_mix,   get_param_range(current_mode_, ParamId::Mix));
+    ps.tone  = map_param(n_tone,  get_param_range(current_mode_, ParamId::Tone));
+    ps.p1    = map_param(n_p1,    get_param_range(current_mode_, ParamId::P1));
+    ps.p2    = map_param(n_p2,    get_param_range(current_mode_, ParamId::P2));
+    ps.level = map_param(n_level, get_param_range(current_mode_, ParamId::Level));
     return ps;
 }
 
-void DelayPluginProcessor::ensureModeFromParam() {
-    const int next_mode = juce::jlimit(0, pedal::NUM_MODES - 1, (int)std::lround(getParam(apvts_, "mode")));
-    const auto next_id  = static_cast<pedal::DelayModeId>(next_mode);
-    if (next_id == current_mode_) {
-        return;
-    }
+void ModulationPluginProcessor::ensureModeFromParam() {
+    const int next_mode = juce::jlimit(0, pedal::NUM_MODES - 1,
+        (int)std::lround(getParam(apvts_, "mode")));
+    const auto next_id = static_cast<pedal::ModModeId>(next_mode);
+    if (next_id == current_mode_) return;
 
     current_mode_ = next_id;
     active_mode_  = mode_registry_.get(current_mode_);
-    if (active_mode_ != nullptr) {
-        active_mode_->Reset();
-    }
+    if (active_mode_ != nullptr) active_mode_->Reset();
 }
 
-void DelayPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) {
+void ModulationPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) {
     juce::ScopedNoDenormals noDenormals;
 
     ensureModeFromParam();
@@ -119,7 +110,7 @@ void DelayPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
 
     const bool bypassed = getParam(apvts_, "bypass") >= 0.5f;
 
-    // Compute tempo-synced delay time when requested by the user.
+    // Compute tempo-synced LFO period when requested.
     float host_period_s = -1.0f;
     if (getParam(apvts_, "tempo_sync") >= 0.5f) {
         if (auto* ph = getPlayHead()) {
@@ -140,59 +131,53 @@ void DelayPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     auto* right = buffer.getWritePointer(1);
     const int n = buffer.getNumSamples();
 
-    if (bypassed) {
-        return;
-    }
+    if (bypassed) return;
 
     const float angle = ps.mix * 1.57079632679f;
-    const float dry_g = std::cos(angle);
-    const float wet_g = std::sin(angle);
+    const float dry_g = std::cos(angle) * ps.level;
+    const float wet_g = std::sin(angle) * ps.level;
 
     for (int i = 0; i < n; ++i) {
         const float dry = 0.5f * (left[i] + right[i]);
         const auto wet  = active_mode_->Process(dry, ps);
 
-        left[i]  = dry * dry_g + wet.left * wet_g;
+        left[i]  = dry * dry_g + wet.left  * wet_g;
         right[i] = dry * dry_g + wet.right * wet_g;
     }
 }
 
-juce::AudioProcessorEditor* DelayPluginProcessor::createEditor() {
-    return new DelayPluginEditor(*this);
+juce::AudioProcessorEditor* ModulationPluginProcessor::createEditor() {
+    return new ModulationPluginEditor(*this);
 }
 
-bool DelayPluginProcessor::hasEditor() const { return true; }
-const juce::String DelayPluginProcessor::getName() const { return JucePlugin_Name; }
-bool DelayPluginProcessor::acceptsMidi() const { return false; }
-bool DelayPluginProcessor::producesMidi() const { return false; }
-bool DelayPluginProcessor::isMidiEffect() const { return false; }
-double DelayPluginProcessor::getTailLengthSeconds() const { return 3.0; }
+bool ModulationPluginProcessor::hasEditor() const { return true; }
+const juce::String ModulationPluginProcessor::getName() const { return JucePlugin_Name; }
+bool ModulationPluginProcessor::acceptsMidi() const { return false; }
+bool ModulationPluginProcessor::producesMidi() const { return false; }
+bool ModulationPluginProcessor::isMidiEffect() const { return false; }
+double ModulationPluginProcessor::getTailLengthSeconds() const { return 0.5; }
 
-int DelayPluginProcessor::getNumPrograms() { return 1; }
-int DelayPluginProcessor::getCurrentProgram() { return 0; }
-void DelayPluginProcessor::setCurrentProgram(int) {}
-const juce::String DelayPluginProcessor::getProgramName(int) { return {}; }
-void DelayPluginProcessor::changeProgramName(int, const juce::String&) {}
+int ModulationPluginProcessor::getNumPrograms() { return 1; }
+int ModulationPluginProcessor::getCurrentProgram() { return 0; }
+void ModulationPluginProcessor::setCurrentProgram(int) {}
+const juce::String ModulationPluginProcessor::getProgramName(int) { return {}; }
+void ModulationPluginProcessor::changeProgramName(int, const juce::String&) {}
 
-void DelayPluginProcessor::getStateInformation(juce::MemoryBlock& destData) {
+void ModulationPluginProcessor::getStateInformation(juce::MemoryBlock& destData) {
     auto state = apvts_.copyState();
     std::unique_ptr<juce::XmlElement> xml(state.createXml());
     copyXmlToBinary(*xml, destData);
 }
 
-void DelayPluginProcessor::setStateInformation(const void* data, int sizeInBytes) {
+void ModulationPluginProcessor::setStateInformation(const void* data, int sizeInBytes) {
     std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
-    if (xmlState == nullptr) {
-        return;
-    }
-    if (!xmlState->hasTagName(apvts_.state.getType())) {
-        return;
-    }
+    if (xmlState == nullptr) return;
+    if (!xmlState->hasTagName(apvts_.state.getType())) return;
     apvts_.replaceState(juce::ValueTree::fromXml(*xmlState));
     ensureModeFromParam();
 }
 
-juce::AudioProcessorValueTreeState::ParameterLayout DelayPluginProcessor::createParameterLayout() {
+juce::AudioProcessorValueTreeState::ParameterLayout ModulationPluginProcessor::createParameterLayout() {
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> p;
 
     auto addNorm = [&](const juce::String& id, const juce::String& name, float def) {
@@ -200,27 +185,31 @@ juce::AudioProcessorValueTreeState::ParameterLayout DelayPluginProcessor::create
             juce::ParameterID{id, 1}, name, juce::NormalisableRange<float>(0.0f, 1.0f), def));
     };
 
-    addNorm("time", "Time", 0.5f);
-    addNorm("repeats", "Repeats", 0.4f);
-    addNorm("mix", "Mix", 0.5f);
-    addNorm("filter", "Filter", 0.5f);
-    addNorm("grit", "Grit", 0.0f);
-    addNorm("modspd", "Mod Speed", 0.5f);
-    addNorm("moddep", "Mod Depth", 0.0f);
+    // 7 modulation parameters
+    addNorm("speed", "Speed",  0.3f);   // LFO rate (normalized)
+    addNorm("depth", "Depth",  0.5f);   // modulation depth
+    addNorm("mix",   "Mix",    0.5f);   // wet/dry
+    addNorm("tone",  "Tone",   0.5f);   // brightness (0.5 = flat)
+    addNorm("p1",    "P1",     0.0f);   // mode-specific parameter 1
+    addNorm("p2",    "P2",     0.5f);   // mode-specific parameter 2
+    addNorm("level", "Level",  0.5f);   // output level (0.5 norm = unity)
 
+    // Mode selector — 12 modulation modes
     juce::StringArray modeNames;
-    modeNames.add("Duck");
-    modeNames.add("Swell");
-    modeNames.add("Trem");
-    modeNames.add("Digital");
-    modeNames.add("DBucket");
-    modeNames.add("Tape");
-    modeNames.add("Dual");
-    modeNames.add("Pattern");
+    modeNames.add("Chorus");
+    modeNames.add("Flanger");
+    modeNames.add("Rotary");
+    modeNames.add("Vibe");
+    modeNames.add("Phaser");
     modeNames.add("Filter");
-    modeNames.add("LoFi");
+    modeNames.add("Formant");
+    modeNames.add("VintTrem");
+    modeNames.add("PattTrem");
+    modeNames.add("AutoSwell");
+    modeNames.add("Destroyer");
+    modeNames.add("Quadrature");
     p.push_back(std::make_unique<juce::AudioParameterChoice>(
-        juce::ParameterID{"mode", 1}, "Mode", modeNames, (int)pedal::DelayModeId::Digital));
+        juce::ParameterID{"mode", 1}, "Mode", modeNames, (int)pedal::ModModeId::Chorus));
 
     p.push_back(std::make_unique<juce::AudioParameterBool>(
         juce::ParameterID{"bypass", 1}, "Bypass", false));
@@ -244,5 +233,5 @@ juce::AudioProcessorValueTreeState::ParameterLayout DelayPluginProcessor::create
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
-    return new DelayPluginProcessor();
+    return new ModulationPluginProcessor();
 }

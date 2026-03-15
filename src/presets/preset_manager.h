@@ -3,7 +3,7 @@
 #include "daisy_seed.h"
 #include "util/PersistentStorage.h"
 #include "../config/constants.h"
-#include "../config/delay_mode_id.h"
+#include "../config/mod_mode_id.h"
 #include <cstdint>
 
 namespace pedal {
@@ -15,10 +15,10 @@ public:
     int  GetActiveSlot() const { return active_slot_; }
     void SetActiveSlot(int slot);
 
-    bool LoadActive(DelayModeId& out_mode, float out_norm[NUM_PARAMS]);
-    bool LoadSlot(int slot, DelayModeId& out_mode, float out_norm[NUM_PARAMS]);
+    bool LoadActive(ModModeId& out_mode, float out_norm[NUM_PARAMS]);
+    bool LoadSlot(int slot, ModModeId& out_mode, float out_norm[NUM_PARAMS]);
 
-    bool SaveSlot(int slot, DelayModeId mode, const float norm[NUM_PARAMS]);
+    bool SaveSlot(int slot, ModModeId mode, const float norm[NUM_PARAMS]);
 
 private:
     struct PresetSlot {

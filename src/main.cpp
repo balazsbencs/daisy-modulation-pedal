@@ -1,6 +1,6 @@
 #include "daisy_seed.h"
 #include "config/constants.h"
-#include "config/delay_mode_id.h"
+#include "config/mod_mode_id.h"
 #include "config/pin_map.h"
 #include "hardware/controls.h"
 #include "audio/audio_engine.h"
@@ -32,8 +32,8 @@ static pedal::TempoSync        tempo_sync;
 static pedal::PresetManager    preset_manager;
 
 // -- Mutable main-loop state --------------------------------------------------
-static pedal::DelayModeId current_mode = pedal::DelayModeId::Digital;
-static pedal::Bypass      bypass_disp;
+static pedal::ModModeId current_mode = pedal::ModModeId::Chorus;
+static pedal::Bypass    bypass_disp;
 
 namespace {
 
@@ -52,13 +52,13 @@ static float Clamp01(float v) {
 }
 
 static void InitDefaultParamNorm(ParamEditState& st) {
-    st.norm[0] = 0.5f;
-    st.norm[1] = 0.4f;
-    st.norm[2] = 0.5f;
-    st.norm[3] = 0.5f;
-    st.norm[4] = 0.0f;
-    st.norm[5] = 0.5f;
-    st.norm[6] = 0.0f;
+    st.norm[0] = 0.3f;  // Speed: moderate LFO rate
+    st.norm[1] = 0.5f;  // Depth
+    st.norm[2] = 0.5f;  // Mix
+    st.norm[3] = 0.5f;  // Tone: flat
+    st.norm[4] = 0.0f;  // P1
+    st.norm[5] = 0.0f;  // P2
+    st.norm[6] = 0.5f;  // Level: maps to 1.0 gain (unity at 0.5 norm since range is 0..2)
 }
 
 static int WrapSlotIndex(int slot) {
@@ -91,32 +91,32 @@ static void ApplyEncoderEdit(float& target,
 }
 
 static pedal::ParamSet BuildParams(const ParamEditState& edit,
-                                   pedal::DelayModeId    mode,
-                                   float                 time_override) {
+                                   pedal::ModModeId      mode,
+                                   float                 speed_override) {
     using namespace pedal;
 
     ParamSet ps;
-    ps.time    = map_param(edit.norm[0], get_param_range(mode, ParamId::Time));
-    ps.repeats = map_param(edit.norm[1], get_param_range(mode, ParamId::Repeats));
-    ps.mix     = map_param(edit.norm[2], get_param_range(mode, ParamId::Mix));
-    ps.filter  = map_param(edit.norm[3], get_param_range(mode, ParamId::Filter));
-    ps.grit    = map_param(edit.norm[4], get_param_range(mode, ParamId::Grit));
-    ps.mod_spd = map_param(edit.norm[5], get_param_range(mode, ParamId::ModSpd));
-    ps.mod_dep = map_param(edit.norm[6], get_param_range(mode, ParamId::ModDep));
+    ps.speed = map_param(edit.norm[0], get_param_range(mode, ParamId::Speed));
+    ps.depth = map_param(edit.norm[1], get_param_range(mode, ParamId::Depth));
+    ps.mix   = map_param(edit.norm[2], get_param_range(mode, ParamId::Mix));
+    ps.tone  = map_param(edit.norm[3], get_param_range(mode, ParamId::Tone));
+    ps.p1    = map_param(edit.norm[4], get_param_range(mode, ParamId::P1));
+    ps.p2    = map_param(edit.norm[5], get_param_range(mode, ParamId::P2));
+    ps.level = map_param(edit.norm[6], get_param_range(mode, ParamId::Level));
 
-    if (time_override > 0.0f) {
-        ps.time = (time_override < 3.0f) ? time_override : 3.0f;
+    if (speed_override > 0.0f) {
+        ps.speed = (speed_override < 10.0f) ? speed_override : 10.0f;
     }
 
     return ps;
 }
 
-static void ActivateMode(pedal::DelayModeId new_id) {
+static void ActivateMode(pedal::ModModeId new_id) {
     if (new_id == current_mode) {
         return;
     }
     current_mode = new_id;
-    pedal::DelayMode* m = mode_registry.get(new_id);
+    pedal::ModMode* m = mode_registry.get(new_id);
     m->Reset();
     audio_engine.SetMode(m);
 }
@@ -142,8 +142,8 @@ int main() {
     ParamEditState param_edit{};
     InitDefaultParamNorm(param_edit);
 
-    pedal::DelayModeId boot_mode = current_mode;
-    float              boot_norm[pedal::NUM_PARAMS]{};
+    pedal::ModModeId boot_mode = current_mode;
+    float            boot_norm[pedal::NUM_PARAMS]{};
     if (preset_manager.LoadActive(boot_mode, boot_norm)) {
         current_mode = boot_mode;
         for (int i = 0; i < pedal::NUM_PARAMS; ++i) {
@@ -156,7 +156,7 @@ int main() {
     relay.Write(true);
     led_bypass.Write(true);
 
-    pedal::DelayMode* initial_mode = mode_registry.get(current_mode);
+    pedal::ModMode* initial_mode = mode_registry.get(current_mode);
     initial_mode->Reset();
     audio_engine.SetMode(initial_mode);
 
@@ -175,7 +175,7 @@ int main() {
         controls.Poll();
         const pedal::ControlState& ctrl = controls.state();
 
-        // Mode encoder controls preset slot while held, else delay mode.
+        // Mode encoder controls preset slot while held, else modulation mode.
         if (ctrl.mode_encoder_increment != 0) {
             if (ctrl.mode_encoder_held) {
                 int slot = preset_manager.GetActiveSlot();
@@ -194,7 +194,7 @@ int main() {
                 if (idx >= pedal::NUM_MODES) {
                     idx = 0;
                 }
-                ActivateMode(static_cast<pedal::DelayModeId>(idx));
+                ActivateMode(static_cast<pedal::ModModeId>(idx));
             }
         }
 
@@ -255,8 +255,8 @@ int main() {
 
         if (preset_tap_chord_active && ctrl.tap_released) {
             if (!preset_long_fired) {
-                pedal::DelayModeId loaded_mode = current_mode;
-                float              loaded_norm[pedal::NUM_PARAMS]{};
+                pedal::ModModeId loaded_mode = current_mode;
+                float            loaded_norm[pedal::NUM_PARAMS]{};
                 if (preset_manager.LoadSlot(preset_manager.GetActiveSlot(),
                                             loaded_mode,
                                             loaded_norm)) {
@@ -284,7 +284,7 @@ int main() {
 
         if (midi_state.program_change >= 0
             && midi_state.program_change < pedal::NUM_MODES) {
-            ActivateMode(static_cast<pedal::DelayModeId>(midi_state.program_change));
+            ActivateMode(static_cast<pedal::ModModeId>(midi_state.program_change));
         }
 
         // MIDI CC writes directly into editable normalized state.
@@ -296,8 +296,8 @@ int main() {
 
         tempo_sync.Process(now);
 
-        const float time_override = tempo_sync.GetOverrideSeconds();
-        const pedal::ParamSet params = BuildParams(param_edit, current_mode, time_override);
+        const float speed_override = tempo_sync.GetOverrideSeconds();
+        const pedal::ParamSet params = BuildParams(param_edit, current_mode, speed_override);
         audio_engine.SetParams(params);
 
         if (preset_event != pedal::DisplayManager::PresetUiEvent::None

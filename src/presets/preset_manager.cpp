@@ -60,14 +60,14 @@ uint32_t PresetManager::ComputeCrc(const PresetStorageState& state) {
 
 void PresetManager::FillDefaultSlot(PresetSlot& slot) {
     slot.valid = 1;
-    slot.mode  = static_cast<uint8_t>(DelayModeId::Digital);
-    slot.norm[0] = 0.5f; // time
-    slot.norm[1] = 0.4f; // repeats
+    slot.mode  = static_cast<uint8_t>(ModModeId::Chorus);
+    slot.norm[0] = 0.3f; // speed
+    slot.norm[1] = 0.5f; // depth
     slot.norm[2] = 0.5f; // mix
-    slot.norm[3] = 0.5f; // filter
-    slot.norm[4] = 0.0f; // grit
-    slot.norm[5] = 0.5f; // mod speed
-    slot.norm[6] = 0.0f; // mod depth
+    slot.norm[3] = 0.5f; // tone
+    slot.norm[4] = 0.0f; // p1
+    slot.norm[5] = 0.0f; // p2
+    slot.norm[6] = 0.5f; // level
 }
 
 void PresetManager::Init(daisy::DaisySeed& hw) {
@@ -100,12 +100,12 @@ void PresetManager::SetActiveSlot(int slot) {
     active_slot_ = NormalizeSlotIndex(slot);
 }
 
-bool PresetManager::LoadActive(DelayModeId& out_mode, float out_norm[NUM_PARAMS]) {
+bool PresetManager::LoadActive(ModModeId& out_mode, float out_norm[NUM_PARAMS]) {
     return LoadSlot(active_slot_, out_mode, out_norm);
 }
 
 bool PresetManager::LoadSlot(int slot,
-                             DelayModeId& out_mode,
+                             ModModeId& out_mode,
                              float out_norm[NUM_PARAMS]) {
     const int s = NormalizeSlotIndex(slot);
 
@@ -119,7 +119,7 @@ bool PresetManager::LoadSlot(int slot,
         return false;
     }
 
-    out_mode = static_cast<DelayModeId>(ps.mode % NUM_MODES);
+    out_mode = static_cast<ModModeId>(ps.mode % NUM_MODES);
     for (int i = 0; i < NUM_PARAMS; ++i) {
         out_norm[i] = Clamp01(ps.norm[i]);
     }
@@ -132,7 +132,7 @@ bool PresetManager::LoadSlot(int slot,
 }
 
 bool PresetManager::SaveSlot(int slot,
-                             DelayModeId mode,
+                             ModModeId mode,
                              const float norm[NUM_PARAMS]) {
     const int s = NormalizeSlotIndex(slot);
 

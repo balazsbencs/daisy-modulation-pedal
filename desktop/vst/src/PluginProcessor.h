@@ -3,14 +3,14 @@
 #include <JuceHeader.h>
 
 #include "modes/mode_registry.h"
-#include "config/delay_mode_id.h"
+#include "config/mod_mode_id.h"
 #include "config/constants.h"
 #include "params/param_set.h"
 
-class DelayPluginProcessor : public juce::AudioProcessor {
+class ModulationPluginProcessor : public juce::AudioProcessor {
 public:
-    DelayPluginProcessor();
-    ~DelayPluginProcessor() override = default;
+    ModulationPluginProcessor();
+    ~ModulationPluginProcessor() override = default;
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
@@ -38,18 +38,18 @@ public:
 
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     juce::AudioProcessorValueTreeState& parameters() { return apvts_; }
-    pedal::DelayModeId getCurrentMode() const { return current_mode_; }
+    pedal::ModModeId getCurrentMode() const { return current_mode_; }
 
 private:
-    // host_period_s: beat-derived time override in seconds, or -1 if none.
+    // host_period_s: beat-derived LFO period override in seconds, or -1 if none.
     pedal::ParamSet buildParamsFromState(float host_period_s) const;
     void ensureModeFromParam();
 
     juce::AudioProcessorValueTreeState apvts_;
 
     pedal::ModeRegistry mode_registry_;
-    pedal::DelayModeId  current_mode_ = pedal::DelayModeId::Digital;
-    pedal::DelayMode*   active_mode_  = nullptr;
+    pedal::ModModeId    current_mode_ = pedal::ModModeId::Chorus;
+    pedal::ModMode*     active_mode_  = nullptr;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DelayPluginProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ModulationPluginProcessor)
 };

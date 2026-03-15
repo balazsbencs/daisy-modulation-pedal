@@ -2,12 +2,12 @@
 #include "daisy_seed.h"
 #include "stereo_frame.h"
 #include "../params/param_set.h"
-#include "../modes/delay_mode.h"
+#include "../modes/mod_mode.h"
 #include "bypass.h"
 
 namespace pedal {
 
-/// Owns the audio processing pipeline for the delay pedal.
+/// Owns the audio processing pipeline for the modulation pedal.
 ///
 /// Thread-safety model:
 ///   - The audio callback runs in interrupt context (ISR).
@@ -25,10 +25,10 @@ public:
     /// Safe to call any time from the main loop.
     void SetParams(const ParamSet& params);
 
-    /// Swap the active delay mode pointer.
+    /// Swap the active modulation mode pointer.
     /// The new mode must already be initialised; the engine starts using it
     /// on the next block boundary.
-    void SetMode(DelayMode* mode);
+    void SetMode(ModMode* mode);
 
     /// Signal bypass state to the audio callback.
     /// @param bypassed  true  → pass audio dry (no processing)
@@ -52,7 +52,7 @@ private:
                       size_t                           size);
 
     daisy::DaisySeed* hw_   = nullptr;
-    DelayMode*        mode_ = nullptr;
+    ModMode*          mode_ = nullptr;
 
     // Double-buffered parameter set.
     // Index convention:
