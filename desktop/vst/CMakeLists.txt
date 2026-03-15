@@ -54,6 +54,7 @@ target_sources(DaisyModulationPlugin PRIVATE
   ../../src/modes/pattern_trem_mode.cpp
   ../../src/modes/auto_swell_mode.cpp
   ../../src/modes/destroyer_mode.cpp
+  ../../src/modes/quadrature_mode.cpp
 )
 
 target_include_directories(DaisyModulationPlugin PRIVATE

@@ -10,7 +10,7 @@
 #include "pattern_trem_mode.h"
 #include "auto_swell_mode.h"
 #include "destroyer_mode.h"
-#include "stub_modes.h"
+#include "quadrature_mode.h"
 
 namespace pedal {
 
@@ -31,8 +31,8 @@ static PatternTremMode s_patt_trem;
 static AutoSwellMode   s_autoswell;
 static DestroyerMode   s_destroyer;
 
-// Placeholder passthrough mode (Phase 4)
-static PassthroughMode s_quadrature("Quadrature");
+// Phase 4 mode
+static QuadratureMode  s_quadrature;
 
 void ModeRegistry::Init() {
     modes_[static_cast<uint8_t>(ModModeId::Chorus)]     = &s_chorus;
