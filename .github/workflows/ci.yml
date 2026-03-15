@@ -61,7 +61,7 @@ jobs:
 
       - name: Print flash/RAM usage
         run: |
-          arm-none-eabi-size build/delay.elf
+          arm-none-eabi-size build/modulation.elf
 
   build-vst:
     name: Build VST Plugin

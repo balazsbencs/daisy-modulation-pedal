@@ -138,15 +138,15 @@ jobs:
         run: make -j$(nproc)
 
       - name: Print flash/RAM usage
-        run: arm-none-eabi-size build/delay.elf
+        run: arm-none-eabi-size build/modulation.elf
 
       - name: Package firmware artifacts
         env:
           VERSION: ${{ needs.version.outputs.new_version }}
         run: |
           mkdir -p dist
-          cp build/delay.bin "dist/daisy-delay-firmware-v${VERSION}.bin"
-          cp build/delay.elf "dist/daisy-delay-firmware-v${VERSION}.elf"
+          cp build/modulation.bin "dist/daisy-modulation-firmware-v${VERSION}.bin"
+          cp build/modulation.elf "dist/daisy-modulation-firmware-v${VERSION}.elf"
 
       - name: Upload firmware artifacts
         uses: actions/upload-artifact@v4
@@ -186,19 +186,19 @@ jobs:
       - name: Package VST artifacts
         env:
           VERSION: ${{ needs.version.outputs.new_version }}
-          ARTEFACTS: desktop/vst/build/DaisyDelayPlugin_artefacts/Release
+          ARTEFACTS: desktop/vst/build/DaisyModulationPlugin_artefacts/Release
         run: |
           mkdir -p dist
 
           # VST3 bundle
-          VST3_SRC="${ARTEFACTS}/VST3/Daisy Delay.vst3"
+          VST3_SRC="${ARTEFACTS}/VST3/Daisy Modulation.vst3"
           ditto -c -k --keepParent "${VST3_SRC}" \
-            "dist/daisy-delay-vst3-macos-v${VERSION}.zip"
+            "dist/daisy-modulation-vst3-macos-v${VERSION}.zip"
 
           # Standalone app
-          APP_SRC="${ARTEFACTS}/Standalone/Daisy Delay.app"
+          APP_SRC="${ARTEFACTS}/Standalone/Daisy Modulation.app"
           ditto -c -k --keepParent "${APP_SRC}" \
-            "dist/daisy-delay-standalone-macos-v${VERSION}.zip"
+            "dist/daisy-modulation-standalone-macos-v${VERSION}.zip"
 
       - name: Upload VST artifacts
         uses: actions/upload-artifact@v4
