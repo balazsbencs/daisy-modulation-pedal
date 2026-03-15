@@ -40,6 +40,7 @@ void RotaryMode::Reset() {
     drum_lfo_q_.Reset();
     dc_l_.Init();
     dc_r_.Init();
+    xover_state_ = 0.0f;
 }
 
 void RotaryMode::Prepare(const ParamSet& params) {
@@ -89,9 +90,8 @@ StereoFrame RotaryMode::Process(float input, const ParamSet& params) {
     // Simple 1-pole crossover: LP → drum, remainder → horn
     // tone: 0=low crossover (~500Hz), 1=high crossover (~3kHz)
     const float xover = 0.05f + params.tone * 0.4f;
-    static float lp_state = 0.0f;
-    lp_state += xover * (driven - lp_state);
-    const float drum_in = lp_state;
+    xover_state_ += xover * (driven - xover_state_);
+    const float drum_in = xover_state_;
     const float horn_in = driven - drum_in;
 
     // Horn delay (Doppler)

@@ -24,12 +24,13 @@ private:
     Saturation drive_;
     DcBlocker  dc_l_, dc_r_;
 
-    float horn_am_l_ = 1.0f;
-    float horn_am_r_ = 1.0f;
-    float drum_am_l_ = 1.0f;
-    float drum_am_r_ = 1.0f;
+    float horn_am_l_  = 1.0f;
+    float horn_am_r_  = 1.0f;
+    float drum_am_l_  = 1.0f;
+    float drum_am_r_  = 1.0f;
     float horn_delay_ = 0.0f;
     float drum_delay_ = 0.0f;
+    float xover_state_ = 0.0f;  // 1-pole LP crossover state (was a function-local static)
 };
 
 } // namespace pedal

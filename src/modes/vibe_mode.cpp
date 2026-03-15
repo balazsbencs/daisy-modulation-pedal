@@ -30,10 +30,12 @@ void VibeMode::Prepare(const ParamSet& params) {
         ldr = -(raw_lfo * raw_lfo); // 0..-1 → 0..-1 (same but sign)
     }
 
-    // Allpass coefficient — non-uniform spacing across 4 stages
-    // Stage coefficients are offset so peaks land at different frequencies.
-    const float sweep = params.depth * 0.6f;
-    lfo_coeff_ = sweep * ldr;  // -0.6..+0.6 from depth=1
+    // Allpass coefficient — must be negative to place notches in the audio band.
+    // For H(z)=(a+z⁻¹)/(1+a·z⁻¹), the N-stage comb notch for dry+wet is in the
+    // audio band only for a < 0. Positive a pushes notches above 10 kHz.
+    // Center −0.70 → notch ≈ 1.5 kHz; depth sweeps ±0.25 → 800 Hz – 4 kHz.
+    const float sweep = params.depth * 0.25f;
+    lfo_coeff_ = -0.70f + sweep * ldr;  // −0.95 .. −0.45 at depth=1
 
     // Amplitude modulation: slight gain reduction on positive LFO half
     // (characteristic UniVibe "throb")
@@ -50,7 +52,7 @@ StereoFrame VibeMode::Process(float input, const ParamSet& params) {
     const float offsets[4] = {0.0f, 0.1f, -0.1f, 0.05f};
     for (int i = 0; i < kStages; ++i) {
         float c = lfo_coeff_ + offsets[i] * params.depth;
-        if (c >  0.99f) c =  0.99f;
+        if (c > -0.01f) c = -0.01f;  // keep negative so notches stay in audio band
         if (c < -0.99f) c = -0.99f;
         stages_[i].SetCoeff(c);
         x = stages_[i].Process(x);
