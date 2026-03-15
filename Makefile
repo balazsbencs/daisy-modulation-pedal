@@ -14,7 +14,11 @@ CPP_SOURCES = \
     src/dsp/lfo.cpp \
     src/dsp/tone_filter.cpp \
     src/modes/chorus_mode.cpp \
+    src/modes/flanger_mode.cpp \
+    src/modes/rotary_mode.cpp \
+    src/modes/vibe_mode.cpp \
     src/modes/phaser_mode.cpp \
+    src/modes/filter_mode.cpp \
     src/modes/vintage_trem_mode.cpp \
     src/modes/mode_registry.cpp \
     src/midi/midi_handler.cpp \

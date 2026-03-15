@@ -1,0 +1,66 @@
+#include "flanger_mode.h"
+#include "../dsp/delay_line_sdram.h"
+#include "../config/constants.h"
+
+namespace pedal {
+
+// 10ms max delay = 480 samples + headroom
+static constexpr size_t kFlangerBufSize = 512;
+static float DSY_SDRAM_BSS s_flanger_buf[kFlangerBufSize];
+static DelayLineSdram s_flanger_line;
+
+void FlangerMode::Init() {
+    s_flanger_line.Init(s_flanger_buf, kFlangerBufSize);
+    lfo_.Init(0.3f, LfoWave::Sine);
+    dc_.Init();
+}
+
+void FlangerMode::Reset() {
+    s_flanger_line.Reset();
+    dc_.Init();
+    feedback_ = 0.0f;
+}
+
+void FlangerMode::Prepare(const ParamSet& params) {
+    lfo_.SetRate(params.speed);
+
+    // Sub-mode from p2: 0=Silver, 1=Grey, 2=Black+, 3=Black-, 4=Zero+, 5=Zero-
+    const int sub = static_cast<int>(params.p2 * 5.999f);
+
+    // Determine feedback sign and base depth from sub-mode
+    switch (sub) {
+        case 0: fb_sign_ =  1.0f; break;  // Silver: positive, moderate
+        case 1: fb_sign_ = -1.0f; break;  // Grey: negative, hollow
+        case 2: fb_sign_ =  1.0f; break;  // Black+: positive, high regen
+        case 3: fb_sign_ = -1.0f; break;  // Black-: negative, high regen
+        case 4: fb_sign_ =  1.0f; break;  // Zero+: through-zero emulation (positive)
+        case 5: fb_sign_ = -1.0f; break;  // Zero-: through-zero emulation (negative)
+        default: fb_sign_ = 1.0f; break;
+    }
+
+    // Black and Zero sub-modes allow higher depth
+    const float max_depth = (sub >= 2) ? 460.0f : 240.0f;
+
+    const float lfo_val = lfo_.PrepareBlock(); // -1..+1
+    // Delay sweeps from near-zero to max_depth
+    delay_samps_ = (0.5f + 0.5f * lfo_val) * params.depth * max_depth + 1.0f;
+    if (delay_samps_ < 1.0f) delay_samps_ = 1.0f;
+    if (delay_samps_ >= static_cast<float>(kFlangerBufSize - 1))
+        delay_samps_ = static_cast<float>(kFlangerBufSize - 1);
+}
+
+StereoFrame FlangerMode::Process(float input, const ParamSet& params) {
+    s_flanger_line.SetDelay(delay_samps_);
+    float wet = s_flanger_line.Read();
+
+    // Feedback clamped to prevent self-oscillation
+    float regen = params.p1 * 0.9f;
+    if (regen > 0.9f) regen = 0.9f;
+    s_flanger_line.Write(input + wet * regen * fb_sign_);
+
+    feedback_ = wet;
+    wet = dc_.Process(wet);
+    return {wet, wet};
+}
+
+} // namespace pedal

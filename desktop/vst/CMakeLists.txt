@@ -44,7 +44,11 @@ target_sources(DaisyModulationPlugin PRIVATE
 
   ../../src/modes/mode_registry.cpp
   ../../src/modes/chorus_mode.cpp
+  ../../src/modes/flanger_mode.cpp
+  ../../src/modes/rotary_mode.cpp
+  ../../src/modes/vibe_mode.cpp
   ../../src/modes/phaser_mode.cpp
+  ../../src/modes/filter_mode.cpp
   ../../src/modes/vintage_trem_mode.cpp
 )
 

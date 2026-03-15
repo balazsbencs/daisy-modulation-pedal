@@ -1,25 +1,31 @@
 #include "mode_registry.h"
 #include "chorus_mode.h"
+#include "flanger_mode.h"
+#include "rotary_mode.h"
+#include "vibe_mode.h"
 #include "phaser_mode.h"
+#include "filter_mode.h"
 #include "vintage_trem_mode.h"
 #include "stub_modes.h"
 
 namespace pedal {
 
-// Implemented modes
+// Phase 1 modes
 static ChorusMode      s_chorus;
 static PhaserMode      s_phaser;
 static VintageTremMode s_vint_trem;
 
-// Placeholder passthrough modes (replaced as phases progress)
-static PassthroughMode s_flanger  ("Flanger");
-static PassthroughMode s_rotary   ("Rotary");
-static PassthroughMode s_vibe     ("Vibe");
-static PassthroughMode s_filter   ("Filter");
-static PassthroughMode s_formant  ("Formant");
-static PassthroughMode s_patt_trem("PattTrem");
-static PassthroughMode s_autoswell("AutoSwell");
-static PassthroughMode s_destroyer("Destroyer");
+// Phase 2 modes
+static FlangerMode     s_flanger;
+static RotaryMode      s_rotary;
+static VibeMode        s_vibe;
+static FilterMode      s_filter;
+
+// Placeholder passthrough modes (Phases 3–4)
+static PassthroughMode s_formant   ("Formant");
+static PassthroughMode s_patt_trem ("PattTrem");
+static PassthroughMode s_autoswell ("AutoSwell");
+static PassthroughMode s_destroyer ("Destroyer");
 static PassthroughMode s_quadrature("Quadrature");
 
 void ModeRegistry::Init() {
