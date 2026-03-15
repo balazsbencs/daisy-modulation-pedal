@@ -18,8 +18,8 @@ void DestroyerMode::Reset() {
 }
 
 void DestroyerMode::Prepare(const ParamSet& params) {
-    // Bitcrush: depth 0..1 → bits 16..4
-    bits_ = 16 - static_cast<int>(params.depth * 12.0f);
+    // Bitcrush: depth 0..1 → bits 16..1
+    bits_ = 16 - static_cast<int>(params.depth * 15.0f);
     if (bits_ < 1) bits_ = 1;
 
     // Decimation rate: speed already in physical units (1×–48×) from SPEED_DESTROYER
