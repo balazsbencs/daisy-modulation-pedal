@@ -44,10 +44,14 @@ void ChorusMode::Prepare(const ParamSet& params) {
     const float mod_depth = params.depth * 480.0f;
 
     if (sub_mode_ == 3) {
-        // Detune: two static offsets with no LFO — creates a fixed pitch shift
+        // Detune: two static offsets with no LFO — creates a fixed pitch shift.
+        // Clamp lower tap: at P1=0, depth=1 the offset (-144 samps) underflows base (48 samps).
         delays_[0] = base_samps - mod_depth * 0.3f;
         delays_[1] = base_samps + mod_depth * 0.3f;
         delays_[2] = base_samps;
+        if (delays_[0] < 1.0f) delays_[0] = 1.0f;
+        if (delays_[1] >= static_cast<float>(kChorusBufSize - 2))
+            delays_[1] = static_cast<float>(kChorusBufSize - 2);
     } else if (sub_mode_ == 1) {
         // Multi: 3 taps with 120° LFO phase offset
         for (int i = 0; i < 3; ++i) {

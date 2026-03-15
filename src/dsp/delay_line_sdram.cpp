@@ -42,6 +42,7 @@ float DelayLineSdram::Read() const {
 }
 
 float DelayLineSdram::ReadAt(float delay_samples) const {
+    if (delay_samples < 1.0f) delay_samples = 1.0f;  // guard negative / near-zero
     size_t int_part = static_cast<size_t>(delay_samples);
     float  frac     = delay_samples - static_cast<float>(int_part);
     if (int_part < 1)      int_part = 1;          // guard zero-latency read
