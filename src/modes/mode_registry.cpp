@@ -6,6 +6,10 @@
 #include "phaser_mode.h"
 #include "filter_mode.h"
 #include "vintage_trem_mode.h"
+#include "formant_mode.h"
+#include "pattern_trem_mode.h"
+#include "auto_swell_mode.h"
+#include "destroyer_mode.h"
 #include "stub_modes.h"
 
 namespace pedal {
@@ -21,11 +25,13 @@ static RotaryMode      s_rotary;
 static VibeMode        s_vibe;
 static FilterMode      s_filter;
 
-// Placeholder passthrough modes (Phases 3–4)
-static PassthroughMode s_formant   ("Formant");
-static PassthroughMode s_patt_trem ("PattTrem");
-static PassthroughMode s_autoswell ("AutoSwell");
-static PassthroughMode s_destroyer ("Destroyer");
+// Phase 3 modes
+static FormantMode     s_formant;
+static PatternTremMode s_patt_trem;
+static AutoSwellMode   s_autoswell;
+static DestroyerMode   s_destroyer;
+
+// Placeholder passthrough mode (Phase 4)
 static PassthroughMode s_quadrature("Quadrature");
 
 void ModeRegistry::Init() {

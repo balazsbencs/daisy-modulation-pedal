@@ -20,6 +20,10 @@ CPP_SOURCES = \
     src/modes/phaser_mode.cpp \
     src/modes/filter_mode.cpp \
     src/modes/vintage_trem_mode.cpp \
+    src/modes/formant_mode.cpp \
+    src/modes/pattern_trem_mode.cpp \
+    src/modes/auto_swell_mode.cpp \
+    src/modes/destroyer_mode.cpp \
     src/modes/mode_registry.cpp \
     src/midi/midi_handler.cpp \
     src/display/display_manager.cpp \

@@ -50,6 +50,10 @@ target_sources(DaisyModulationPlugin PRIVATE
   ../../src/modes/phaser_mode.cpp
   ../../src/modes/filter_mode.cpp
   ../../src/modes/vintage_trem_mode.cpp
+  ../../src/modes/formant_mode.cpp
+  ../../src/modes/pattern_trem_mode.cpp
+  ../../src/modes/auto_swell_mode.cpp
+  ../../src/modes/destroyer_mode.cpp
 )
 
 target_include_directories(DaisyModulationPlugin PRIVATE
