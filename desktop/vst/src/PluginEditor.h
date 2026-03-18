@@ -42,5 +42,11 @@ private:
     juce::Label    subdiv_label_;
     std::unique_ptr<ComboAttachment> subdiv_attach_;
 
+    // Dynamic P1/P2 controls — either slider (continuous) or combo (discrete).
+    std::unique_ptr<juce::ComboBox>   p1_combo_, p2_combo_;
+    int last_mode_ = -1;  // tracks mode for change detection in timer
+
+    void refreshP1P2Controls(int mode);
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ModulationPluginEditor)
 };

@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include "submode_info.h"
 #include "params/param_map.h"
 #include "params/param_id.h"
 #include <cmath>
@@ -19,6 +20,67 @@ constexpr const char* kModeNames[pedal::NUM_MODES] = {
     "Destroyer", "Quadrature"
 };
 } // namespace
+
+void ModulationPluginEditor::refreshP1P2Controls(int mode) {
+    auto& apvts = processor_.parameters();
+    const int modeIdx = juce::jlimit(0, 11, mode);
+
+    auto refreshSlot = [&](int slotIdx,
+                           std::unique_ptr<juce::ComboBox>& combo,
+                           const char* paramId,
+                           const char* defaultLabel,
+                           int paramSlot)
+    {
+        const SubmodeInfo& si = kSubmodeInfo[modeIdx][paramSlot];
+        auto& knob = knobs_[(size_t)slotIdx];
+
+        if (si.is_discrete) {
+            jassert(si.num_choices > 0);
+            // Tear down slider attachment and hide slider.
+            knob.attach.reset();
+            knob.slider.setVisible(false);
+
+            // Build combo box.
+            combo = std::make_unique<juce::ComboBox>();
+            for (int i = 0; i < si.num_choices; ++i)
+                combo->addItem(si.labels[i], i + 1);
+
+            // Pre-select based on current APVTS value.
+            const float curVal = apvts.getRawParameterValue(paramId)->load();
+            const int   curIdx = juce::jlimit(0, si.num_choices - 1,
+                                              (int)(curVal * (float)si.num_choices));
+            combo->setSelectedItemIndex(curIdx, juce::dontSendNotification);
+
+            // On change: write midpoint float back to APVTS.
+            const int num_choices = si.num_choices;
+            combo->onChange = [this, paramId, num_choices]() {
+                juce::ComboBox* cb = (std::string(paramId) == "p1") ? p1_combo_.get() : p2_combo_.get();
+                if (cb == nullptr) return;
+                const int k = cb->getSelectedItemIndex();
+                const float norm = (2.0f * k + 1.0f) / (2.0f * num_choices);
+                if (auto* param = processor_.parameters().getParameter(paramId))
+                    param->setValueNotifyingHost(norm);
+            };
+
+            addAndMakeVisible(*combo);
+            knob.label.setText(paramSlot == 0 ? "P1 Mode" : "P2 Mode",
+                               juce::dontSendNotification);
+        } else {
+            // Remove combo box if present.
+            combo.reset();
+
+            // Show slider and re-attach.
+            knob.slider.setVisible(true);
+            knob.attach = std::make_unique<SliderAttachment>(apvts, paramId, knob.slider);
+            knob.label.setText(defaultLabel, juce::dontSendNotification);
+        }
+    };
+
+    refreshSlot(4, p1_combo_, "p1", "P1", 0);
+    refreshSlot(5, p2_combo_, "p2", "P2", 1);
+
+    resized();
+}
 
 ModulationPluginEditor::ModulationPluginEditor(ModulationPluginProcessor& p)
     : juce::AudioProcessorEditor(&p)
@@ -95,6 +157,8 @@ ModulationPluginEditor::ModulationPluginEditor(ModulationPluginProcessor& p)
     subdiv_attach_ = std::make_unique<ComboAttachment>(apvts, "subdivision", subdiv_box_);
 
     startTimerHz(10);
+    refreshP1P2Controls(static_cast<int>(processor_.getCurrentMode()));
+    last_mode_ = static_cast<int>(processor_.getCurrentMode());
     setSize(760, 340);
 }
 
@@ -107,7 +171,29 @@ void ModulationPluginEditor::timerCallback() {
     knobs_[0].slider.setEnabled(!sync_on);
     subdiv_box_.setEnabled(sync_on);
     if (sync_on)
-        knobs_[0].slider.updateText(); // refresh "Synced" display
+        knobs_[0].slider.updateText();
+
+    // Detect mode change.
+    const int cur_mode = static_cast<int>(processor_.getCurrentMode());
+    if (cur_mode != last_mode_) {
+        auto& apvts = processor_.parameters();
+        const int old_mode = last_mode_;
+
+        if (old_mode >= 0) {
+            // Save current P1/P2 APVTS values for the old mode.
+            processor_.saveP1ForMode(old_mode, apvts.getRawParameterValue("p1")->load());
+            processor_.saveP2ForMode(old_mode, apvts.getRawParameterValue("p2")->load());
+        }
+
+        // Restore saved values for the new mode.
+        if (auto* p1p = apvts.getParameter("p1"))
+            p1p->setValueNotifyingHost(processor_.getP1ForMode(cur_mode));
+        if (auto* p2p = apvts.getParameter("p2"))
+            p2p->setValueNotifyingHost(processor_.getP2ForMode(cur_mode));
+
+        last_mode_ = cur_mode;
+        refreshP1P2Controls(cur_mode);
+    }
 }
 
 void ModulationPluginEditor::paint(juce::Graphics& g) {
@@ -149,4 +235,14 @@ void ModulationPluginEditor::resized() {
 
     subdiv_label_.setBounds(500, 200, 60, 20);
     subdiv_box_.setBounds(565, 196, 165, 28);
+
+    // Dynamic P1/P2 combo boxes (same position as the slider they replace).
+    if (p1_combo_ != nullptr) {
+        const int x = pad + 0 * (knobW + 12);
+        p1_combo_->setBounds(x, 210, knobW, 28);
+    }
+    if (p2_combo_ != nullptr) {
+        const int x = pad + 1 * (knobW + 12);
+        p2_combo_->setBounds(x, 210, knobW, 28);
+    }
 }
