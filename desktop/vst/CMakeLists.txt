@@ -33,6 +33,7 @@ juce_add_plugin(DaisyModulationPlugin
 target_sources(DaisyModulationPlugin PRIVATE
   src/PluginProcessor.cpp
   src/PluginEditor.cpp
+  src/submode_info.cpp
 
   ../../src/dsp/delay_line_sdram.cpp
   ../../src/dsp/envelope_follower.cpp
