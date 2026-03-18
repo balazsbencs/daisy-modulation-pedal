@@ -42,6 +42,18 @@ ModulationPluginProcessor::ModulationPluginProcessor()
     mode_registry_.Init();
     active_mode_ = mode_registry_.get(current_mode_);
     active_mode_->Reset();
+
+    // Initialise per-mode P1/P2 to sensible defaults.
+    for (int m = 0; m < 12; ++m) {
+        const auto& si1 = kSubmodeInfo[m][0];
+        const auto& si2 = kSubmodeInfo[m][1];
+        p1_per_mode_[m] = si1.is_discrete
+            ? (1.0f / (2.0f * si1.num_choices))   // midpoint of choice 0
+            : 0.5f;
+        p2_per_mode_[m] = si2.is_discrete
+            ? (1.0f / (2.0f * si2.num_choices))
+            : 0.5f;
+    }
 }
 
 void ModulationPluginProcessor::prepareToPlay(double, int) {
@@ -176,6 +188,16 @@ void ModulationPluginProcessor::changeProgramName(int, const juce::String&) {}
 void ModulationPluginProcessor::getStateInformation(juce::MemoryBlock& destData) {
     auto state = apvts_.copyState();
     std::unique_ptr<juce::XmlElement> xml(state.createXml());
+
+    // Persist per-mode P1/P2 values as child elements.
+    auto* perMode = xml->createNewChildElement("PerModeParams");
+    for (int m = 0; m < 12; ++m) {
+        auto* el = perMode->createNewChildElement("Mode");
+        el->setAttribute("index", m);
+        el->setAttribute("p1", (double)p1_per_mode_[m]);
+        el->setAttribute("p2", (double)p2_per_mode_[m]);
+    }
+
     copyXmlToBinary(*xml, destData);
 }
 
@@ -183,6 +205,18 @@ void ModulationPluginProcessor::setStateInformation(const void* data, int sizeIn
     std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
     if (xmlState == nullptr) return;
     if (!xmlState->hasTagName(apvts_.state.getType())) return;
+
+    // Restore per-mode P1/P2 values (graceful fallback if absent — old state).
+    if (auto* perMode = xmlState->getChildByName("PerModeParams")) {
+        for (auto* el : perMode->getChildWithTagNameIterator("Mode")) {
+            const int m = el->getIntAttribute("index", -1);
+            if (m >= 0 && m < 12) {
+                p1_per_mode_[m] = (float)el->getDoubleAttribute("p1", p1_per_mode_[m]);
+                p2_per_mode_[m] = (float)el->getDoubleAttribute("p2", p2_per_mode_[m]);
+            }
+        }
+    }
+
     apvts_.replaceState(juce::ValueTree::fromXml(*xmlState));
     ensureModeFromParam();
 }

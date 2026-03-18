@@ -6,6 +6,7 @@
 #include "config/mod_mode_id.h"
 #include "config/constants.h"
 #include "params/param_set.h"
+#include "submode_info.h"
 
 class ModulationPluginProcessor : public juce::AudioProcessor {
 public:
@@ -51,5 +52,16 @@ private:
     pedal::ModModeId    current_mode_ = pedal::ModModeId::Chorus;
     pedal::ModMode*     active_mode_  = nullptr;
 
+    // Per-mode memory for P1 and P2 normalized values.
+    float p1_per_mode_[12];
+    float p2_per_mode_[12];
+
+public:
+    float getP1ForMode(int mode) const { return p1_per_mode_[juce::jlimit(0, 11, mode)]; }
+    float getP2ForMode(int mode) const { return p2_per_mode_[juce::jlimit(0, 11, mode)]; }
+    void  saveP1ForMode(int mode, float v) { p1_per_mode_[juce::jlimit(0, 11, mode)] = v; }
+    void  saveP2ForMode(int mode, float v) { p2_per_mode_[juce::jlimit(0, 11, mode)] = v; }
+
+private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ModulationPluginProcessor)
 };
