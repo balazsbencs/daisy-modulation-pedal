@@ -40,10 +40,14 @@ StereoFrame DestroyerMode::Process(float input, const ParamSet& params) {
     }
     float x = held_sample_;
 
-    // Bit crushing: quantize to `bits_` bits
-    if (bits_ < 16) {
-        const float levels = static_cast<float>(1 << bits_);
+    // Bit crushing: quantize to `bits_` bits.
+    // At 1-bit use sign quantizer; otherwise use 2^bits levels over [-1, +1].
+    if (bits_ <= 1) {
+        x = (x >= 0.0f) ? 1.0f : -1.0f;
+    } else if (bits_ < 16) {
+        const float levels = static_cast<float>(1 << (bits_ - 1));
         x = floorf(x * levels + 0.5f) / levels;
+        if (x > 1.0f) x = 1.0f;
     }
 
     // Post-filter (always LP — canonical bitcrusher output)
