@@ -31,8 +31,8 @@ void AutoSwellMode::Prepare(const ParamSet& params) {
     const float release_ms = 50.0f + params.p1 * 1950.0f;      // 50ms..2000ms
 
     // One-pole IIR coefficients: α = 1 - exp(-1 / (τ * fs))
-    attack_coef_  = 1.0f - expf(-1.0f / (attack_ms  * 0.001f * SAMPLE_RATE));
-    release_coef_ = 1.0f - expf(-1.0f / (release_ms * 0.001f * SAMPLE_RATE));
+    swell_coef_ = 1.0f - expf(-1.0f / (attack_ms  * 0.001f * SAMPLE_RATE));
+    duck_coef_  = 1.0f - expf(-1.0f / (release_ms * 0.001f * SAMPLE_RATE));
 }
 
 StereoFrame AutoSwellMode::Process(float input, const ParamSet& params) {
@@ -42,11 +42,11 @@ StereoFrame AutoSwellMode::Process(float input, const ParamSet& params) {
     // When signal decays, ramp gain back up (the swell)
     const float threshold = 0.05f;
     if (env_val > threshold) {
-        // Input is loud: release gain quickly
-        swell_gain_ += release_coef_ * (0.0f - swell_gain_);
+        // Input is loud: kill gain quickly (duck)
+        swell_gain_ += duck_coef_ * (0.0f - swell_gain_);
     } else {
-        // Input is quiet: slowly ramp gain up (the swell attack)
-        swell_gain_ += attack_coef_ * (1.0f - swell_gain_);
+        // Input is quiet: slowly ramp gain up (the swell opens)
+        swell_gain_ += swell_coef_ * (1.0f - swell_gain_);
     }
 
     // depth boosts the swell peak (+6 dB max); clamp to [-1, +1] to prevent clipping.
