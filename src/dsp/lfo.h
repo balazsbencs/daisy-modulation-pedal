@@ -11,7 +11,7 @@ enum class LfoWave {
     RampUp,         // -1..+1 sawtooth rising
     RampDown,       // +1..-1 sawtooth falling
     SampleAndHold,  // random step (changes once per cycle)
-    Exponential,    // curved sine — faster attack, slower decay
+    Exponential,    // sin²-shaped: slow attack, fast peak approach, slow decay
 };
 
 class Lfo {
