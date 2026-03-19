@@ -18,6 +18,7 @@ void PhaserMode::Reset() {
     lfo2_.Reset();                   // apply offset to phase_ (SetPhaseOffset alone does not)
     for (auto& s : stages_) s.Reset();
     dc_.Init();
+    dc2_.Init();
     center_    = -0.5f;
     depth_mod_ = 0.0f;
     feedback_  = 0.0f;
@@ -70,12 +71,16 @@ StereoFrame PhaserMode::Process(float input, const ParamSet& params) {
             stages_[i].SetCoeff(coeff2);
             xb = stages_[i].Process(xb);
         }
-        // lfo_val ∈ [-1,+1]; t=0 → all chain B, t=1 → all chain A
-        const float t = (lfo_val + 1.0f) * 0.5f;
-        const float x = xa * t + xb * (1.0f - t);
-        const float out = dc_.Process(x);
+        // DC-block each chain before feedback and blending.
+        // Allpass has unity DC gain; without blocking, residual DC recirculates
+        // with gain ≈ regen. Blending two DC-free signals gives DC-free output.
+        xa = dc_.Process(xa);
+        xb = dc2_.Process(xb);
         feedback_  = xa;
         feedback2_ = xb;
+        // lfo_val ∈ [-1,+1]; t=0 → all chain B, t=1 → all chain A
+        const float t = (lfo_val + 1.0f) * 0.5f;
+        const float out = xa * t + xb * (1.0f - t);
         return {out, out};
     }
 

@@ -21,6 +21,7 @@ private:
     Lfo           lfo2_;                  // quadrature LFO for Barber Pole (π/2 offset)
     AllpassFilter stages_[kMaxStages];    // stages[0..3]=chainA, [4..7]=chainB (Barber Pole)
     DcBlocker     dc_;
+    DcBlocker     dc2_;  // separate DC blocker for Barber Pole chain B feedback
     float         center_     = -0.5f;   // allpass center coefficient (from tone)
     float         depth_mod_  = 0.0f;   // LFO swing scale (from depth)
     float         feedback_   = 0.0f;   // regen state for chain A / normal
