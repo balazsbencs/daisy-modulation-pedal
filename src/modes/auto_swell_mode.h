@@ -8,7 +8,7 @@ namespace pedal {
 
 /// Envelope-triggered swell — soft attack volume ramp.
 /// Speed repurposed as attack time (fast=short, slow=long).
-/// P1 = release time; P2 = chorus blend (0=dry swell, 1=add chorus shimmer).
+/// P1 = release time; P2 = shimmer blend (0=dry swell, 1=add fixed-delay doubling).
 class AutoSwellMode : public ModMode {
 public:
     void Init() override;

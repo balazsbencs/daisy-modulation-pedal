@@ -4,9 +4,9 @@
 
 namespace pedal {
 
-// Small delay buffer for optional chorus shimmer (P2)
-static constexpr size_t kSwellBufSize    = 1200;
-// Fixed chorus delay: 580 samples = ~12.08 ms at 48 kHz
+// Small delay buffer for optional shimmer/doubling effect (P2)
+static constexpr size_t kSwellBufSize   = 1200;
+// Fixed shimmer delay: 580 samples ≈ 12 ms — creates comb/doubling, not modulated chorus
 static constexpr float  kSwellChorusDelay = 580.0f;
 static float DSY_SDRAM_BSS s_swell_buf[kSwellBufSize];
 static DelayLineSdram s_swell_line;
@@ -57,7 +57,7 @@ StereoFrame AutoSwellMode::Process(float input, const ParamSet& params) {
     // Always write to delay line so buffer is primed when P2 is turned up
     s_swell_line.Write(wet);
 
-    // Optional chorus shimmer from P2: blend in a short modulated delay
+    // Optional shimmer from P2: blend in a fixed-delay tap (12 ms doubling, not modulated)
     if (params.p2 > 0.05f) {
         s_swell_line.SetDelay(kSwellChorusDelay);
         const float chorus_wet = s_swell_line.Read();
