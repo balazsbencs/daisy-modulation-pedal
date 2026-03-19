@@ -56,31 +56,11 @@ void RotaryMode::Prepare(const ParamSet& params) {
     // Drive from P1
     drive_.SetDrive(params.p1);
 
-    // Per-block LFO values
-    const float hl  = horn_lfo_.PrepareBlock();
-    const float hlq = horn_lfo_q_.PrepareBlock();
-    const float dl  = drum_lfo_.PrepareBlock();
-    const float dlq = drum_lfo_q_.PrepareBlock();
-
-    // Amplitude modulation (horn/drum each produce AM on L and R with 90° offset)
-    const float am_depth = params.depth * 0.4f;
-    horn_am_l_ = 1.0f - am_depth * (0.5f + 0.5f * hl);
-    horn_am_r_ = 1.0f - am_depth * (0.5f + 0.5f * hlq);
-    drum_am_l_ = 1.0f - am_depth * 0.7f * (0.5f + 0.5f * dl);
-    drum_am_r_ = 1.0f - am_depth * 0.7f * (0.5f + 0.5f * dlq);
-
-    // Doppler delay modulation (converts LFO → pitch shift via delay variation)
-    const float horn_mod = params.depth * 100.0f;  // max ±100 samples = ~2ms
-    const float drum_mod = params.depth * 200.0f;  // max ±200 samples = ~4ms
-    horn_delay_ = 120.0f + hl * horn_mod;
-    drum_delay_ = 240.0f + dl * drum_mod;
-
-    if (horn_delay_ < 1.0f) horn_delay_ = 1.0f;
-    if (horn_delay_ >= static_cast<float>(kHornBufSize - 1))
-        horn_delay_ = static_cast<float>(kHornBufSize - 1);
-    if (drum_delay_ < 1.0f) drum_delay_ = 1.0f;
-    if (drum_delay_ >= static_cast<float>(kDrumBufSize - 1))
-        drum_delay_ = static_cast<float>(kDrumBufSize - 1);
+    // Cache depth-derived values for per-sample use in Process().
+    am_depth_ = params.depth * 0.4f;
+    horn_mod_ = params.depth * 100.0f;  // max ±100 samples = ~2ms
+    drum_mod_ = params.depth * 200.0f;  // max ±200 samples = ~4ms
+    // LFO values computed per-sample in Process() to avoid block-boundary zipper noise.
 }
 
 StereoFrame RotaryMode::Process(float input, const ParamSet& params) {
@@ -94,13 +74,35 @@ StereoFrame RotaryMode::Process(float input, const ParamSet& params) {
     const float drum_in = xover_state_;
     const float horn_in = driven - drum_in;
 
+    // Per-sample LFO values for smooth Doppler + AM modulation.
+    const float hl  = horn_lfo_.Process();
+    const float hlq = horn_lfo_q_.Process();
+    const float dl  = drum_lfo_.Process();
+    const float dlq = drum_lfo_q_.Process();
+
+    // AM coefficients
+    const float horn_am_l = 1.0f - am_depth_ * (0.5f + 0.5f * hl);
+    const float horn_am_r = 1.0f - am_depth_ * (0.5f + 0.5f * hlq);
+    const float drum_am_l = 1.0f - am_depth_ * 0.7f * (0.5f + 0.5f * dl);
+    const float drum_am_r = 1.0f - am_depth_ * 0.7f * (0.5f + 0.5f * dlq);
+
+    // Doppler delays — clamp to valid range.
+    float horn_delay = 120.0f + hl * horn_mod_;
+    float drum_delay = 240.0f + dl * drum_mod_;
+    if (horn_delay < 1.0f) horn_delay = 1.0f;
+    if (horn_delay >= static_cast<float>(kHornBufSize - 1))
+        horn_delay = static_cast<float>(kHornBufSize - 1);
+    if (drum_delay < 1.0f) drum_delay = 1.0f;
+    if (drum_delay >= static_cast<float>(kDrumBufSize - 1))
+        drum_delay = static_cast<float>(kDrumBufSize - 1);
+
     // Horn delay (Doppler)
-    s_horn_line.SetDelay(horn_delay_);
+    s_horn_line.SetDelay(horn_delay);
     s_horn_line.Write(horn_in);
     const float horn_wet = s_horn_line.Read();
 
     // Drum delay (Doppler)
-    s_drum_line.SetDelay(drum_delay_);
+    s_drum_line.SetDelay(drum_delay);
     s_drum_line.Write(drum_in);
     const float drum_wet = s_drum_line.Read();
 
@@ -108,8 +110,8 @@ StereoFrame RotaryMode::Process(float input, const ParamSet& params) {
     const float horn_mix = params.p2;
     const float drum_mix = 1.0f - params.p2;
 
-    float out_l = horn_wet * horn_am_l_ * horn_mix + drum_wet * drum_am_l_ * drum_mix;
-    float out_r = horn_wet * horn_am_r_ * horn_mix + drum_wet * drum_am_r_ * drum_mix;
+    float out_l = horn_wet * horn_am_l * horn_mix + drum_wet * drum_am_l * drum_mix;
+    float out_r = horn_wet * horn_am_r * horn_mix + drum_wet * drum_am_r * drum_mix;
 
     out_l = dc_l_.Process(out_l);
     out_r = dc_r_.Process(out_r);

@@ -21,11 +21,10 @@ private:
     Lfo           lfo2_;                  // quadrature LFO for Barber Pole (π/2 offset)
     AllpassFilter stages_[kMaxStages];    // stages[0..3]=chainA, [4..7]=chainB (Barber Pole)
     DcBlocker     dc_;
-    float         lfo_coeff_  = 0.0f;    // cached allpass coefficient (chain A / normal)
-    float         lfo_coeff2_ = 0.0f;    // cached allpass coefficient for chain B
-    float         lfo_val_    = 0.0f;    // stored LFO value for Barber Pole crossfade
-    float         feedback_   = 0.0f;    // regen state for chain A / normal
-    float         feedback2_  = 0.0f;    // regen state for chain B (Barber Pole)
+    float         center_     = -0.5f;   // allpass center coefficient (from tone)
+    float         depth_mod_  = 0.0f;   // LFO swing scale (from depth)
+    float         feedback_   = 0.0f;   // regen state for chain A / normal
+    float         feedback2_  = 0.0f;   // regen state for chain B (Barber Pole)
     int           num_stages_  = 4;      // active stage count (normal modes)
     bool          barber_pole_ = false;  // true when sub-mode 6 is active
 };

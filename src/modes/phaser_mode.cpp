@@ -17,11 +17,10 @@ void PhaserMode::Reset() {
     lfo2_.SetPhaseOffset(kHalfPi);   // 90° quadrature offset for Barber Pole
     for (auto& s : stages_) s.Reset();
     dc_.Init();
-    lfo_coeff_  = 0.0f;
-    lfo_coeff2_ = 0.0f;
-    lfo_val_    = 0.0f;
-    feedback_   = 0.0f;
-    feedback2_  = 0.0f;
+    center_    = -0.5f;
+    depth_mod_ = 0.0f;
+    feedback_  = 0.0f;
+    feedback2_ = 0.0f;
     num_stages_  = 4;
     barber_pole_ = false;
 }
@@ -35,47 +34,43 @@ void PhaserMode::Prepare(const ParamSet& params) {
     barber_pole_ = (sub == 6);
     num_stages_  = kStageCounts[sub];
 
-    // Negative allpass coefficients place the phase-shift notch in the audio band.
-    // For H(z)=(a+z⁻¹)/(1+a·z⁻¹) cascaded N times, the notch of (dry+wet)
-    // falls at cos(ω) = -2a/(1+a²). Positive a pushes the notch near Nyquist;
-    // negative a puts it in the 300 Hz – 12 kHz phaser sweet spot.
+    // Cache center frequency and depth swing for per-sample LFO use in Process().
     // center: tone=0 → -0.95 (notch ~300 Hz), tone=1 → -0.10 (notch ~10 kHz)
-    const float lfo_val = lfo_.PrepareBlock(); // -1..+1
-    lfo_val_ = lfo_val;
-    const float center  = -(0.95f - params.tone * 0.85f);
-    lfo_coeff_ = center + params.depth * 0.4f * lfo_val;
-    if (lfo_coeff_ > -0.01f) lfo_coeff_ = -0.01f;
-    if (lfo_coeff_ < -0.99f) lfo_coeff_ = -0.99f;
-
-    if (barber_pole_) {
-        const float lfo_val2 = lfo2_.PrepareBlock(); // 90° offset
-        lfo_coeff2_ = center + params.depth * 0.4f * lfo_val2;
-        if (lfo_coeff2_ > -0.01f) lfo_coeff2_ = -0.01f;
-        if (lfo_coeff2_ < -0.99f) lfo_coeff2_ = -0.99f;
-    }
+    center_    = -(0.95f - params.tone * 0.85f);
+    depth_mod_ = params.depth * 0.4f;
+    // LFO coefficients computed per-sample in Process() to avoid block-boundary zipper noise.
 }
 
 StereoFrame PhaserMode::Process(float input, const ParamSet& params) {
     const float regen = params.p1 * 0.95f;
 
+    // Per-sample LFO values for smooth allpass sweep.
+    const float lfo_val = lfo_.Process();
+    float coeff = center_ + depth_mod_ * lfo_val;
+    if (coeff > -0.01f) coeff = -0.01f;
+    if (coeff < -0.99f) coeff = -0.99f;
+
     if (barber_pole_) {
         // Two independent 4-stage chains with quadrature LFOs.
-        // Chain A: stages[0..3] with lfo_coeff_
-        // Chain B: stages[4..7] with lfo_coeff2_ (90° offset)
-        // Crossfade based on lfo_val_ so one chain's sweep hands off to the other,
+        // Crossfade based on lfo_val so one chain's sweep hands off to the other,
         // creating the infinite rising/falling illusion.
+        const float lfo_val2 = lfo2_.Process();
+        float coeff2 = center_ + depth_mod_ * lfo_val2;
+        if (coeff2 > -0.01f) coeff2 = -0.01f;
+        if (coeff2 < -0.99f) coeff2 = -0.99f;
+
         float xa = input + feedback_  * regen;
         float xb = input + feedback2_ * regen;
         for (int i = 0; i < 4; ++i) {
-            stages_[i].SetCoeff(lfo_coeff_);
+            stages_[i].SetCoeff(coeff);
             xa = stages_[i].Process(xa);
         }
         for (int i = 4; i < 8; ++i) {
-            stages_[i].SetCoeff(lfo_coeff2_);
+            stages_[i].SetCoeff(coeff2);
             xb = stages_[i].Process(xb);
         }
-        // lfo_val_ ∈ [-1,+1]; t=0 → all chain B, t=1 → all chain A
-        const float t = (lfo_val_ + 1.0f) * 0.5f;
+        // lfo_val ∈ [-1,+1]; t=0 → all chain B, t=1 → all chain A
+        const float t = (lfo_val + 1.0f) * 0.5f;
         const float x = xa * t + xb * (1.0f - t);
         const float out = dc_.Process(x);
         feedback_  = xa;
@@ -86,7 +81,7 @@ StereoFrame PhaserMode::Process(float input, const ParamSet& params) {
     // Normal path: single chain with num_stages_ stages
     float x = input + feedback_ * regen;
     for (int i = 0; i < num_stages_; ++i) {
-        stages_[i].SetCoeff(lfo_coeff_);
+        stages_[i].SetCoeff(coeff);
         x = stages_[i].Process(x);
     }
     x = dc_.Process(x);

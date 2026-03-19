@@ -9,7 +9,7 @@ void VintageTremMode::Init() {
 
 void VintageTremMode::Reset() {
     lfo_.Init(4.0f, LfoWave::Sine);
-    gain_ = 1.0f;
+    depth_ = 0.5f;
 }
 
 void VintageTremMode::Prepare(const ParamSet& params) {
@@ -20,16 +20,16 @@ void VintageTremMode::Prepare(const ParamSet& params) {
     else               lfo_.SetWave(LfoWave::Exponential);
 
     lfo_.SetRate(params.speed);
-    const float lfo_val = lfo_.PrepareBlock(); // -1..+1
-    // gain = 1 - depth * (0.5 + 0.5 * lfo_val):
-    //   lfo_val=+1 → 1 - depth (minimum volume)
-    //   lfo_val=-1 → 1 (maximum volume)
-    gain_ = 1.0f - params.depth * (0.5f + 0.5f * lfo_val);
-    if (gain_ < 0.0f) gain_ = 0.0f;
+    depth_ = params.depth;
+    // Gain computed per-sample in Process() to avoid block-boundary zipper noise.
 }
 
 StereoFrame VintageTremMode::Process(float input, const ParamSet& /*params*/) {
-    const float wet = input * gain_;
+    // Per-sample LFO for smooth amplitude modulation.
+    const float lfo_val = lfo_.Process(); // -1..+1
+    float gain = 1.0f - depth_ * (0.5f + 0.5f * lfo_val);
+    if (gain < 0.0f) gain = 0.0f;
+    const float wet = input * gain;
     return {wet, wet};
 }
 

@@ -25,8 +25,9 @@ private:
     EnvelopeFollower env_;
     DcBlocker        dc_;
 
-    float mod_val_           = 0.0f;     // cached modulation value 0..1
-    float envelope_cutoff_hz_ = 1000.0f; // cutoff computed in Process(), applied in Prepare()
+    float base_hz_           = 1000.0f;  // cutoff center (cached from tone in Prepare)
+    float depth_             = 0.5f;     // cached params.depth for per-sample use
+    float envelope_cutoff_hz_ = 1000.0f; // cutoff for env modes: computed in Process(), applied in Prepare()
     int   ftype_    = 0;      // 0=LP, 1=BP(Wah), 2=HP
     bool  use_env_  = false;
     bool  env_inv_  = false;

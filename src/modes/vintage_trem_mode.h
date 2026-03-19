@@ -15,7 +15,7 @@ public:
 
 private:
     Lfo   lfo_;
-    float gain_ = 1.0f;  // cached per-block gain
+    float depth_ = 0.5f;  // cached params.depth for per-sample gain computation
 };
 
 } // namespace pedal

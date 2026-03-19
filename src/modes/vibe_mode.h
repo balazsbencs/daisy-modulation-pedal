@@ -21,9 +21,8 @@ private:
     Lfo          lfo_;
     AllpassFilter stages_[kStages];
     DcBlocker    dc_;
-    float        lfo_coeff_ = 0.0f;  // allpass coefficient from LFO
-    float        am_gain_   = 1.0f;  // amplitude modulation gain
     float        feedback_  = 0.0f;  // regen state
+    // lfo_coeff and am_gain computed per-sample in Process()
 };
 
 } // namespace pedal
