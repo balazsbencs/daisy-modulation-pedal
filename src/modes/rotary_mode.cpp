@@ -21,10 +21,12 @@ void RotaryMode::Init() {
     horn_lfo_.Init(1.8f, LfoWave::Sine);
     horn_lfo_q_.Init(1.8f, LfoWave::Sine);
     horn_lfo_q_.SetPhaseOffset(TWO_PI * 0.25f); // 90°
+    horn_lfo_q_.Reset();  // apply offset to phase_
 
     drum_lfo_.Init(1.0f, LfoWave::Sine);
     drum_lfo_q_.Init(1.0f, LfoWave::Sine);
     drum_lfo_q_.SetPhaseOffset(TWO_PI * 0.25f);
+    drum_lfo_q_.Reset();  // apply offset to phase_
 
     drive_.Init();
     dc_l_.Init();

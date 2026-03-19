@@ -15,6 +15,7 @@ void PhaserMode::Reset() {
     lfo_.Init(0.5f, LfoWave::Sine);
     lfo2_.Init(0.5f, LfoWave::Sine);
     lfo2_.SetPhaseOffset(kHalfPi);   // 90° quadrature offset for Barber Pole
+    lfo2_.Reset();                   // apply offset to phase_ (SetPhaseOffset alone does not)
     for (auto& s : stages_) s.Reset();
     dc_.Init();
     center_    = -0.5f;
