@@ -14,11 +14,13 @@ public:
         hp_  = 0.0f;
     }
 
-    /// Process one sample through the BBD coloration chain.
+    /// Process one sample through the BBD input coloration chain.
+    /// Applies 2-pole LP smoothing (~4.6 kHz, two cascaded 1-pole EMA stages)
+    /// and injects subtle clock noise — gives the warm, slightly dulled character
+    /// of a real BBD's charge-transfer path. Use as the delay-line write source.
     /// noise_amount: 0..1, clock noise injection level.
-    /// Returns the colored sample (use as input to the delay line).
     float Process(float input, float noise_amount, uint32_t& rand_state) {
-        // 2-pole LP emulating pre-emphasis (cutoff ~6 kHz)
+        // Two cascaded 1-pole LPs (k=0.45 → pole at 0.55 → -3dB ≈ 4.6 kHz each)
         constexpr float k = 0.45f;
         lp1_ += k * (input - lp1_);
         lp2_ += k * (lp1_  - lp2_);
@@ -35,7 +37,9 @@ public:
         return sat;
     }
 
-    /// Apply de-emphasis (HF boost) to the output of the delay line.
+    /// Apply HF shelf boost to the delay-line output.
+    /// Compensates for the LP smoothing applied on the input side, restoring
+    /// perceived high-frequency presence (analogous to BBD de-emphasis).
     float Deemphasis(float delayed) {
         constexpr float k = 0.45f;
         hp_ += k * (delayed - hp_);
