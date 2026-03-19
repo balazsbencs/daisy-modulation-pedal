@@ -49,7 +49,10 @@ StereoFrame AutoSwellMode::Process(float input, const ParamSet& params) {
         swell_gain_ += attack_coef_ * (1.0f - swell_gain_);
     }
 
+    // depth boosts the swell peak (+6 dB max); clamp to [-1, +1] to prevent clipping.
     float wet = input * swell_gain_ * (1.0f + params.depth);
+    if (wet >  1.0f) wet =  1.0f;
+    if (wet < -1.0f) wet = -1.0f;
 
     // Always write to delay line so buffer is primed when P2 is turned up
     s_swell_line.Write(wet);
