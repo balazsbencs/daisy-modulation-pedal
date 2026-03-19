@@ -38,38 +38,23 @@ void ChorusMode::Prepare(const ParamSet& params) {
     for (auto& l : lfo_) l.SetRate(params.speed);
 
     // Base delay: p1 maps 1ms..20ms → 48..960 samples
-    const float base_samps = 48.0f + params.p1 * 912.0f;
+    base_samps_ = 48.0f + params.p1 * 912.0f;
 
     // LFO depth: params.depth * 480 samples = ±10ms variation.
-    // Cap to base_samps-1 so the delay never hits the 1-sample floor,
-    // which would cause severe pitch artefacts when the LFO swings negative.
-    const float mod_depth = fminf(params.depth * 480.0f, base_samps - 1.0f);
+    // Cap to base_samps-1 so the LFO never swings the delay below 1 sample.
+    mod_depth_ = fminf(params.depth * 480.0f, base_samps_ - 1.0f);
 
     if (sub_mode_ == 3) {
-        // Detune: two static offsets with no LFO — creates a fixed pitch shift.
-        delays_[0] = base_samps - mod_depth * 0.3f;
-        delays_[1] = base_samps + mod_depth * 0.3f;
-        delays_[2] = base_samps;
+        // Detune: two static offsets, no LFO — compute once here.
+        delays_[0] = base_samps_ - mod_depth_ * 0.3f;
+        delays_[1] = base_samps_ + mod_depth_ * 0.3f;
+        delays_[2] = base_samps_;
         if (delays_[0] < 1.0f) delays_[0] = 1.0f;
         if (delays_[1] >= static_cast<float>(kChorusBufSize - 2))
             delays_[1] = static_cast<float>(kChorusBufSize - 2);
-    } else if (sub_mode_ == 1) {
-        // Multi: 3 taps with 120° LFO phase offset
-        for (int i = 0; i < 3; ++i) {
-            const float lfo_val = lfo_[i].PrepareBlock();
-            delays_[i] = base_samps + mod_depth * lfo_val;
-            if (delays_[i] < 1.0f) delays_[i] = 1.0f;
-            if (delays_[i] >= static_cast<float>(kChorusBufSize - 2))
-                delays_[i] = static_cast<float>(kChorusBufSize - 2);
-        }
-    } else {
-        // Single-voice: use lfo_[0]
-        const float lfo_val = lfo_[0].PrepareBlock();
-        delays_[0] = base_samps + mod_depth * lfo_val;
-        if (delays_[0] < 1.0f) delays_[0] = 1.0f;
-        if (delays_[0] >= static_cast<float>(kChorusBufSize - 2))
-            delays_[0] = static_cast<float>(kChorusBufSize - 2);
     }
+    // Multi and single-voice: LFO advanced per-sample in Process() to avoid
+    // block-boundary delay jumps that cause zipper noise at high LFO rates.
 }
 
 StereoFrame ChorusMode::Process(float input, const ParamSet& params) {
@@ -85,19 +70,30 @@ StereoFrame ChorusMode::Process(float input, const ParamSet& params) {
     float wet_l, wet_r;
 
     if (sub_mode_ == 1) {
-        // Multi: average 3 taps, pan L/R with tap 2 and 3
+        // Multi: per-sample LFO for all 3 taps (no block-boundary jumps)
+        for (int i = 0; i < 3; ++i) {
+            float d = base_samps_ + mod_depth_ * lfo_[i].Process();
+            if (d < 1.0f) d = 1.0f;
+            if (d >= static_cast<float>(kChorusBufSize - 2))
+                d = static_cast<float>(kChorusBufSize - 2);
+            delays_[i] = d;
+        }
         const float t0 = s_chorus_line.ReadAt(delays_[0]);
         const float t1 = s_chorus_line.ReadAt(delays_[1]);
         const float t2 = s_chorus_line.ReadAt(delays_[2]);
         wet_l = (t0 + t1) * 0.5f;
         wet_r = (t0 + t2) * 0.5f;
     } else if (sub_mode_ == 3) {
-        // Detune: L=tap0, R=tap1 (stereo detuning)
+        // Detune: L=tap0, R=tap1 (pre-computed in Prepare, no LFO)
         wet_l = s_chorus_line.ReadAt(delays_[0]);
         wet_r = s_chorus_line.ReadAt(delays_[1]);
     } else {
-        // Single-voice (dBucket, Vibrato, Digital)
-        float wet = s_chorus_line.ReadAt(delays_[0]);
+        // Single-voice (dBucket, Vibrato, Digital): per-sample LFO
+        float d = base_samps_ + mod_depth_ * lfo_[0].Process();
+        if (d < 1.0f) d = 1.0f;
+        if (d >= static_cast<float>(kChorusBufSize - 2))
+            d = static_cast<float>(kChorusBufSize - 2);
+        float wet = s_chorus_line.ReadAt(d);
         if (sub_mode_ == 0) {
             wet = bbd_.Deemphasis(wet);  // dBucket post-coloration
         }

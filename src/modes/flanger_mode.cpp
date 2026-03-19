@@ -40,18 +40,19 @@ void FlangerMode::Prepare(const ParamSet& params) {
     }
 
     // Black and Zero sub-modes allow higher depth
-    const float max_depth = (sub >= 2) ? 460.0f : 240.0f;
-
-    const float lfo_val = lfo_.PrepareBlock(); // -1..+1
-    // Delay sweeps from near-zero to max_depth
-    delay_samps_ = (0.5f + 0.5f * lfo_val) * params.depth * max_depth + 1.0f;
-    if (delay_samps_ < 1.0f) delay_samps_ = 1.0f;
-    if (delay_samps_ >= static_cast<float>(kFlangerBufSize - 1))
-        delay_samps_ = static_cast<float>(kFlangerBufSize - 1);
+    max_depth_ = (sub >= 2) ? 460.0f : 240.0f;
+    depth_ = params.depth;
+    // Delay computed per-sample in Process() to avoid block-boundary zipper noise.
 }
 
 StereoFrame FlangerMode::Process(float input, const ParamSet& params) {
-    s_flanger_line.SetDelay(delay_samps_);
+    // Compute delay per-sample for smooth LFO modulation.
+    const float lfo_val = lfo_.Process();
+    float delay = (0.5f + 0.5f * lfo_val) * depth_ * max_depth_ + 1.0f;
+    if (delay < 1.0f) delay = 1.0f;
+    if (delay >= static_cast<float>(kFlangerBufSize - 1))
+        delay = static_cast<float>(kFlangerBufSize - 1);
+    s_flanger_line.SetDelay(delay);
     float wet = s_flanger_line.Read();
 
     // Feedback clamped to prevent self-oscillation
