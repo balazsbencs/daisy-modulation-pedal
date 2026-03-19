@@ -22,7 +22,7 @@ private:
     DcBlocker   dc_;           // DC blocker for left channel
     DcBlocker   dc_r_;         // DC blocker for right channel (Multi/Detune sub-modes)
     uint32_t    rand_ = 12345;
-    float       delays_[3] = {};  // cached delay values (Detune only; others computed per-sample)
+    float       delays_[3] = {};  // Detune: static offsets set in Prepare(); Multi: per-sample LFO taps written and read in Process()
     int         sub_mode_   = 4;  // cached sub-mode index
     float       base_samps_ = 48.0f;
     float       mod_depth_  = 0.0f;
