@@ -40,12 +40,13 @@ void ChorusMode::Prepare(const ParamSet& params) {
     // Base delay: p1 maps 1ms..20ms → 48..960 samples
     const float base_samps = 48.0f + params.p1 * 912.0f;
 
-    // LFO depth: params.depth * 480 samples = ±10ms variation
-    const float mod_depth = params.depth * 480.0f;
+    // LFO depth: params.depth * 480 samples = ±10ms variation.
+    // Cap to base_samps-1 so the delay never hits the 1-sample floor,
+    // which would cause severe pitch artefacts when the LFO swings negative.
+    const float mod_depth = fminf(params.depth * 480.0f, base_samps - 1.0f);
 
     if (sub_mode_ == 3) {
         // Detune: two static offsets with no LFO — creates a fixed pitch shift.
-        // Clamp lower tap: at P1=0, depth=1 the offset (-144 samps) underflows base (48 samps).
         delays_[0] = base_samps - mod_depth * 0.3f;
         delays_[1] = base_samps + mod_depth * 0.3f;
         delays_[2] = base_samps;
