@@ -20,7 +20,6 @@ private:
     DcBlocker dc_;
     float    max_depth_ = 240.0f;  // max delay swing for current sub-mode
     float    depth_     = 0.5f;   // cached params.depth
-    float    feedback_  = 0.0f;   // feedback state
     float    fb_sign_   = 1.0f;   // +1 or -1 from sub-mode
 };
 

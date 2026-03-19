@@ -19,7 +19,6 @@ void FlangerMode::Reset() {
     s_flanger_line.Reset();
     lfo_.Reset();
     dc_.Init();
-    feedback_ = 0.0f;
 }
 
 void FlangerMode::Prepare(const ParamSet& params) {
@@ -60,7 +59,6 @@ StereoFrame FlangerMode::Process(float input, const ParamSet& params) {
     if (regen > 0.9f) regen = 0.9f;
     s_flanger_line.Write(input + wet * regen * fb_sign_);
 
-    feedback_ = wet;
     wet = dc_.Process(wet);
     return {wet, wet};
 }
