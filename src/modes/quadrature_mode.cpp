@@ -51,7 +51,13 @@ void QuadratureMode::Prepare(const ParamSet& params) {
 }
 
 StereoFrame QuadratureMode::Process(float input, const ParamSet& params) {
-    auto [re, im] = hilbert_.Process(input);
+    // AM (sub_mode_=0) uses raw input for ring-mod; Hilbert is only needed for
+    // FM/FreqShift modes. Skip the 8-allpass transform in the AM path.
+    float re = input, im = 0.0f;
+    if (sub_mode_ != 0) {
+        auto [r, i] = hilbert_.Process(input);
+        re = r; im = i;
+    }
 
     // Advance carrier phase — FM mode varies instantaneous rate with LFO.
     if (sub_mode_ == 1) {
