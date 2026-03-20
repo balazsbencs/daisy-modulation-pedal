@@ -65,9 +65,9 @@ void RotaryMode::Prepare(const ParamSet& params) {
     // LFO values computed per-sample in Process() to avoid block-boundary zipper noise.
 }
 
-StereoFrame RotaryMode::Process(float input, const ParamSet& params) {
+StereoFrame RotaryMode::Process(StereoFrame input, const ParamSet& params) {
     // Optional drive stage
-    float driven = (params.p1 > 0.02f) ? drive_.Process(input) : input;
+    float driven = (params.p1 > 0.02f) ? drive_.Process(input.mono()) : input.mono();
 
     // Simple 1-pole crossover: LP → drum, remainder → horn
     // tone: 0=low crossover (~500Hz), 1=high crossover (~3kHz)
