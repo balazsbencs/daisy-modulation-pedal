@@ -145,13 +145,7 @@ void ModulationPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
     const int n = buffer.getNumSamples();
 
     if (bypassed) {
-        // True bypass: mono-sum the stereo input and route to both outputs,
-        // matching the firmware behaviour (pedal is a mono-input device).
-        for (int i = 0; i < n; ++i) {
-            const float dry = 0.5f * (left[i] + right[i]);
-            left[i]  = dry;
-            right[i] = dry;
-        }
+        // True bypass: pass left and right independently.
         return;
     }
 
@@ -160,11 +154,11 @@ void ModulationPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
     const float wet_g = std::sin(angle) * ps.level;
 
     for (int i = 0; i < n; ++i) {
-        const float dry = 0.5f * (left[i] + right[i]);
-        const auto wet  = active_mode_->Process(dry, ps);
+        const pedal::StereoFrame wet = active_mode_->Process(
+            pedal::StereoFrame{left[i], right[i]}, ps);
 
-        left[i]  = dry * dry_g + wet.left  * wet_g;
-        right[i] = dry * dry_g + wet.right * wet_g;
+        left[i]  = left[i]  * dry_g + wet.left  * wet_g;
+        right[i] = right[i] * dry_g + wet.right * wet_g;
     }
 }
 
