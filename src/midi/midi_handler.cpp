@@ -46,15 +46,16 @@ bool MidiLearn::TryLearn(uint8_t cc_num) {
 // ---------------------------------------------------------------------------
 
 void MidiHandlerPedal::Init() {
-    // MIDI disabled during hardware bring-up: both UART and USB DMA/interrupt
-    // handlers stall the main loop when no MIDI device is connected.
-    // TODO: re-enable once audio hardware is attached and system is stable.
-    // MidiUartHandler::Config uart_cfg;
-    // uart_midi_.Init(uart_cfg);
-    // uart_midi_.StartReceive();
-    // MidiUsbHandler::Config usb_cfg;
-    // usb_midi_.Init(usb_cfg);
-    // usb_midi_.StartReceive();
+    // UART MIDI: default config uses USART1 (D14=RX, D13=TX) which matches
+    // the hardware. DMA circular buffer — StartReceive() is non-blocking even
+    // when no MIDI device is connected.
+    MidiUartHandler::Config uart_cfg;
+    uart_midi_.Init(uart_cfg);
+    uart_midi_.StartReceive();
+
+    // USB MIDI is intentionally excluded: D29/D30 (USB D-/D+) are wired to
+    // the Tone encoder and cannot simultaneously serve USB. To add USB MIDI,
+    // reroute Enc 4 to unused GPIO pins and update pin_map.h.
 
     learn_.Init();
 }
@@ -64,14 +65,10 @@ void MidiHandlerPedal::Poll(MidiState& out_state) {
     out_state.clock_tick     = false;
     out_state.clock_stop     = false;
 
-    // uart_midi_.Listen();
-    // while (uart_midi_.HasEvents()) {
-    //     ProcessEvent(uart_midi_.PopEvent(), out_state);
-    // }
-    // usb_midi_.Listen();
-    // while (usb_midi_.HasEvents()) {
-    //     ProcessEvent(usb_midi_.PopEvent(), out_state);
-    // }
+    uart_midi_.Listen();
+    while (uart_midi_.HasEvents()) {
+        ProcessEvent(uart_midi_.PopEvent(), out_state);
+    }
 }
 
 void MidiHandlerPedal::ProcessEvent(const MidiEvent& ev, MidiState& state) {

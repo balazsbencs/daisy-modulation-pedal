@@ -68,7 +68,6 @@ public:
 
 private:
     daisy::MidiUartHandler uart_midi_;
-    daisy::MidiUsbHandler  usb_midi_;
     MidiLearn              learn_;
 
     /// Dispatch a single MidiEvent into the shared MidiState accumulator.
