@@ -15,12 +15,14 @@ void AutoSwellMode::Init() {
     s_swell_line.Init(s_swell_buf, kSwellBufSize);
     env_.Init(5.0f, 200.0f);
     dc_.Init();
+    dc_r_.Init();
 }
 
 void AutoSwellMode::Reset() {
     s_swell_line.Reset();
     env_.Init(5.0f, 200.0f);
     dc_.Init();
+    dc_r_.Init();
     swell_gain_  = 0.0f;
     swelling_    = false;
 }
@@ -35,8 +37,9 @@ void AutoSwellMode::Prepare(const ParamSet& params) {
     duck_coef_  = 1.0f - expf(-1.0f / (release_ms * 0.001f * SAMPLE_RATE));
 }
 
-StereoFrame AutoSwellMode::Process(float input, const ParamSet& params) {
-    const float env_val = env_.Process(input);  // 0..1 signal level
+StereoFrame AutoSwellMode::Process(StereoFrame input, const ParamSet& params) {
+    const float mono_in = input.mono();
+    const float env_val = env_.Process(mono_in);  // 0..1 signal level
 
     // When signal is present, release gain (let it drop to near-zero)
     // When signal decays, ramp gain back up (the swell)
@@ -49,23 +52,31 @@ StereoFrame AutoSwellMode::Process(float input, const ParamSet& params) {
         swell_gain_ += swell_coef_ * (1.0f - swell_gain_);
     }
 
-    // depth boosts the swell peak (+6 dB max); clamp to [-1, +1] to prevent clipping.
-    float wet = input * swell_gain_ * (1.0f + params.depth);
-    if (wet >  1.0f) wet =  1.0f;
-    if (wet < -1.0f) wet = -1.0f;
+    // depth boosts the swell peak (+6 dB max); apply to each channel independently.
+    const float scale = swell_gain_ * (1.0f + params.depth);
+    float wet_l = input.left  * scale;
+    float wet_r = input.right * scale;
+    if (wet_l >  1.0f) wet_l =  1.0f;
+    if (wet_l < -1.0f) wet_l = -1.0f;
+    if (wet_r >  1.0f) wet_r =  1.0f;
+    if (wet_r < -1.0f) wet_r = -1.0f;
 
-    // Always write to delay line so buffer is primed when P2 is turned up
-    s_swell_line.Write(wet);
+    // Shimmer/doubling delay line stays mono (fed from mono mix of swelled signal).
+    const float shimmer_in = (wet_l + wet_r) * 0.5f;
+    s_swell_line.Write(shimmer_in);
 
     // Optional shimmer from P2: blend in a fixed-delay tap (12 ms doubling, not modulated)
     if (params.p2 > 0.05f) {
         s_swell_line.SetDelay(kSwellChorusDelay);
         const float chorus_wet = s_swell_line.Read();
-        wet = wet * (1.0f - params.p2 * 0.3f) + chorus_wet * params.p2 * 0.3f;
+        const float blend = params.p2 * 0.3f;
+        wet_l = wet_l * (1.0f - blend) + chorus_wet * blend;
+        wet_r = wet_r * (1.0f - blend) + chorus_wet * blend;
     }
 
-    wet = dc_.Process(wet);
-    return {wet, wet};
+    wet_l = dc_.Process(wet_l);
+    wet_r = dc_r_.Process(wet_r);
+    return {wet_l, wet_r};
 }
 
 } // namespace pedal

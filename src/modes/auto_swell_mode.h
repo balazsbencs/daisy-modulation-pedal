@@ -14,12 +14,13 @@ public:
     void Init() override;
     void Reset() override;
     void Prepare(const ParamSet& params) override;
-    StereoFrame Process(float input, const ParamSet& params) override;
+    StereoFrame Process(StereoFrame input, const ParamSet& params) override;
     const char* Name() const override { return "AutoSwell"; }
 
 private:
     EnvelopeFollower env_;
     DcBlocker        dc_;
+    DcBlocker        dc_r_;
 
     float swell_gain_  = 0.0f;   // current swell gain 0..1
     float swell_coef_  = 0.001f;   // IIR coef for gain rise (signal absent → swell opens)

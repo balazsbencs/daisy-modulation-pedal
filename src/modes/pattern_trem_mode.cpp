@@ -33,7 +33,7 @@ void PatternTremMode::Prepare(const ParamSet& params) {
     seq_.SetPattern(pattern, steps_per_beat);
 }
 
-StereoFrame PatternTremMode::Process(float input, const ParamSet& params) {
+StereoFrame PatternTremMode::Process(StereoFrame input, const ParamSet& params) {
     gate_ = seq_.Process();
 
     // Smooth gate edges to avoid clicks (simple one-pole envelope).
@@ -46,8 +46,7 @@ StereoFrame PatternTremMode::Process(float input, const ParamSet& params) {
 
     // Apply tremolo: mix between 0 and input based on depth
     const float trem_gain = 1.0f - params.depth * (1.0f - smoothed_);
-    const float wet = input * trem_gain;
-    return {wet, wet};
+    return {input.left * trem_gain, input.right * trem_gain};
 }
 
 } // namespace pedal
