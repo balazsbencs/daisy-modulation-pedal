@@ -31,12 +31,12 @@ void DestroyerMode::Prepare(const ParamSet& params) {
     svf_.SetQ(0.5f + params.p1 * 8.0f);
 }
 
-StereoFrame DestroyerMode::Process(float input, const ParamSet& params) {
+StereoFrame DestroyerMode::Process(StereoFrame input, const ParamSet& params) {
     // Sample-rate decimation: hold sample for decimate_rate_ samples
     decimate_acc_ += 1.0f;
     if (decimate_acc_ >= decimate_rate_) {
         decimate_acc_ -= decimate_rate_;
-        held_sample_ = input;
+        held_sample_ = input.mono();
     }
     float x = held_sample_;
 

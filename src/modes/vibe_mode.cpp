@@ -21,7 +21,7 @@ void VibeMode::Prepare(const ParamSet& params) {
     // to avoid block-boundary zipper noise.
 }
 
-StereoFrame VibeMode::Process(float input, const ParamSet& params) {
+StereoFrame VibeMode::Process(StereoFrame input, const ParamSet& params) {
     // Per-sample LFO + LDR nonlinearity for smooth UniVibe sweep.
     const float raw_lfo = lfo_.Process(); // -1..+1
     // LDR asymmetric curve: compress positive half, expand negative.
@@ -36,7 +36,7 @@ StereoFrame VibeMode::Process(float input, const ParamSet& params) {
 
     // Regen feedback
     const float regen = params.p1 * 0.7f;
-    float x = input + feedback_ * regen;
+    float x = input.mono() + feedback_ * regen;
 
     // 4 allpass stages with slight per-stage coefficient offsets (non-uniform)
     const float offsets[4] = {0.0f, 0.1f, -0.1f, 0.05f};

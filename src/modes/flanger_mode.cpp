@@ -44,7 +44,7 @@ void FlangerMode::Prepare(const ParamSet& params) {
     // Delay computed per-sample in Process() to avoid block-boundary zipper noise.
 }
 
-StereoFrame FlangerMode::Process(float input, const ParamSet& params) {
+StereoFrame FlangerMode::Process(StereoFrame input, const ParamSet& params) {
     // Compute delay per-sample for smooth LFO modulation.
     const float lfo_val = lfo_.Process();
     float delay = (0.5f + 0.5f * lfo_val) * depth_ * max_depth_ + 1.0f;
@@ -57,7 +57,7 @@ StereoFrame FlangerMode::Process(float input, const ParamSet& params) {
     // Feedback clamped to prevent self-oscillation
     float regen = params.p1 * 0.9f;
     if (regen > 0.9f) regen = 0.9f;
-    s_flanger_line.Write(input + wet * regen * fb_sign_);
+    s_flanger_line.Write(input.mono() + wet * regen * fb_sign_);
 
     wet = dc_.Process(wet);
     return {wet, wet};
