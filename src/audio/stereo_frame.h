@@ -5,6 +5,8 @@ namespace pedal {
 struct StereoFrame {
     float left  = 0.0f;
     float right = 0.0f;
+
+    float mono() const { return (left + right) * 0.5f; }
 };
 
 inline StereoFrame make_mono_frame(float sample) {
