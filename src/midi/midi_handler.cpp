@@ -46,16 +46,10 @@ bool MidiLearn::TryLearn(uint8_t cc_num) {
 // ---------------------------------------------------------------------------
 
 void MidiHandlerPedal::Init() {
-    // UART MIDI: default config uses USART1 (D14=RX, D13=TX) which matches
-    // the hardware. DMA circular buffer — StartReceive() is non-blocking even
-    // when no MIDI device is connected.
-    MidiUartHandler::Config uart_cfg;
-    uart_midi_.Init(uart_cfg);
-    uart_midi_.StartReceive();
-
-    // USB MIDI is intentionally excluded: D29/D30 (USB D-/D+) are wired to
-    // the Tone encoder and cannot simultaneously serve USB. To add USB MIDI,
-    // reroute Enc 4 to unused GPIO pins and update pin_map.h.
+    // MIDI disabled: UART DMA init interferes with the I2C display on boot,
+    // causing the screen to freeze. Re-enable once the root cause is identified.
+    // When re-enabling, use UART only — USB MIDI is excluded because D29/D30
+    // (USB D-/D+) are wired to the Tone encoder.
 
     learn_.Init();
 }
@@ -65,10 +59,7 @@ void MidiHandlerPedal::Poll(MidiState& out_state) {
     out_state.clock_tick     = false;
     out_state.clock_stop     = false;
 
-    uart_midi_.Listen();
-    while (uart_midi_.HasEvents()) {
-        ProcessEvent(uart_midi_.PopEvent(), out_state);
-    }
+    // MIDI disabled — see Init().
 }
 
 void MidiHandlerPedal::ProcessEvent(const MidiEvent& ev, MidiState& state) {
