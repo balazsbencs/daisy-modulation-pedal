@@ -39,6 +39,8 @@ public:
                 int             preset_slot,
                 bool            shift_layer_active,
                 PresetUiEvent   preset_event,
+                int             mode_encoder_delta,
+                const int       param_encoder_delta[4],
                 uint32_t        now_ms);
 
 private:
@@ -49,7 +51,10 @@ private:
                 const TempoSync& tempo,
                 int              preset_slot,
                 bool             shift_layer_active,
-                PresetUiEvent    preset_event);
+                PresetUiEvent    preset_event,
+                int              mode_encoder_delta,
+                const int        param_encoder_delta[4],
+                uint32_t         now_ms);
 
     /// Draw an outlined rectangle with an interior fill proportional to val [0, 1].
     /// @param x   Left edge of the bar.
@@ -63,6 +68,8 @@ private:
 
     OledType oled_;
     uint32_t last_update_ms_ = 0;
+    int      pending_mode_delta_ = 0;
+    int      pending_param_delta_[4]{};
 };
 
 } // namespace pedal

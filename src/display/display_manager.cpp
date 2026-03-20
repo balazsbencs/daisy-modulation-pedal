@@ -7,6 +7,60 @@ using namespace daisy;
 namespace pedal {
 
 // ---------------------------------------------------------------------------
+// FormatSpeed — flash-conservative string formatter (no printf)
+// Writes a null-terminated value+unit string into out[].
+// buf must be at least 8 bytes.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+static uint8_t PutUInt(char* p, uint32_t v) {
+    if (v == 0) { p[0] = '0'; return 1; }
+    char tmp[6];
+    uint8_t n = 0;
+    while (v) { tmp[n++] = static_cast<char>('0' + v % 10); v /= 10; }
+    for (uint8_t i = 0; i < n; ++i) p[i] = tmp[n - 1u - i];
+    return n;
+}
+
+// Returns a formatted speed string: "3.5Hz", "440Hz", "120ms", "12x".
+static void FormatSpeed(ModModeId mode, float speed, char* out) {
+    uint8_t pos = 0;
+
+    if (mode == ModModeId::AutoSwell) {
+        // speed is attack time in seconds (0.010..0.500) → display as ms
+        uint32_t ms = static_cast<uint32_t>(speed * 1000.0f + 0.5f);
+        pos += PutUInt(out + pos, ms);
+        out[pos++] = 'm'; out[pos++] = 's';
+
+    } else if (mode == ModModeId::Destroyer) {
+        // speed is decimation ratio (1..48)
+        uint32_t r = static_cast<uint32_t>(speed + 0.5f);
+        pos += PutUInt(out + pos, r);
+        out[pos++] = 'x';
+
+    } else if (speed >= 10.0f) {
+        // 10 Hz and above — whole number
+        pos += PutUInt(out + pos, static_cast<uint32_t>(speed + 0.5f));
+        out[pos++] = 'H'; out[pos++] = 'z';
+
+    } else {
+        // below 10 Hz — one decimal place, e.g. "3.5Hz"
+        uint32_t integer = static_cast<uint32_t>(speed);
+        uint32_t frac    = static_cast<uint32_t>((speed - static_cast<float>(integer)) * 10.0f + 0.5f);
+        if (frac >= 10) { integer++; frac = 0; }
+        pos += PutUInt(out + pos, integer);
+        out[pos++] = '.';
+        out[pos++] = static_cast<char>('0' + frac);
+        out[pos++] = 'H'; out[pos++] = 'z';
+    }
+
+    out[pos] = '\0';
+}
+
+} // namespace
+
+// ---------------------------------------------------------------------------
 // Init
 // ---------------------------------------------------------------------------
 
@@ -34,12 +88,33 @@ void DisplayManager::Update(ModModeId        mode,
                              int              preset_slot,
                              bool             shift_layer_active,
                              PresetUiEvent    preset_event,
+                             int              mode_encoder_delta,
+                             const int        param_encoder_delta[4],
                              uint32_t         now_ms) {
+    pending_mode_delta_ += mode_encoder_delta;
+    for (int i = 0; i < 4; ++i) {
+        pending_param_delta_[i] += param_encoder_delta[i];
+    }
+
     if (now_ms - last_update_ms_ < DISPLAY_UPDATE_MS) {
         return;
     }
     last_update_ms_ = now_ms;
-    Render(mode, params, bypass, tempo, preset_slot, shift_layer_active, preset_event);
+    Render(mode,
+           params,
+           bypass,
+           tempo,
+           preset_slot,
+           shift_layer_active,
+           preset_event,
+           pending_mode_delta_,
+           pending_param_delta_,
+           now_ms);
+
+    pending_mode_delta_ = 0;
+    for (int i = 0; i < 4; ++i) {
+        pending_param_delta_[i] = 0;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -52,7 +127,10 @@ void DisplayManager::Render(ModModeId        mode,
                              const TempoSync& tempo,
                              int              preset_slot,
                              bool             shift_layer_active,
-                             PresetUiEvent    preset_event) {
+                             PresetUiEvent    preset_event,
+                             int              mode_encoder_delta,
+                             const int        param_encoder_delta[4],
+                             uint32_t         now_ms) {
     oled_.Fill(false);
 
     // --- Mode name (large font, top-left) ---
@@ -79,9 +157,11 @@ void DisplayManager::Render(ModModeId        mode,
     oled_.SetCursor(86, layout::PARAM_ROW1_Y);
     oled_.WriteString("Mx", Font_6x8, true);
 
-    // --- Row 1 bars (width 38 px each) ---
-    // speed: 0.05..10 Hz → normalise to [0,1]
-    DrawParamBar(0,  layout::BAR_Y1_TOP, 38, params.speed / 10.0f);
+    // --- Row 1: speed value as text, depth/mix as bars ---
+    char speed_buf[8];
+    FormatSpeed(mode, params.speed, speed_buf);
+    oled_.SetCursor(0, layout::BAR_Y1_TOP);
+    oled_.WriteString(speed_buf, Font_6x8, true);
     // depth: already [0,1]
     DrawParamBar(43, layout::BAR_Y1_TOP, 38, params.depth);
     // mix: already [0,1]
@@ -162,18 +242,18 @@ void DisplayManager::DrawParamBar(uint8_t x, uint8_t y, uint8_t w, float val) {
 
 const char* DisplayManager::ModeName(ModModeId id) {
     switch (id) {
-        case ModModeId::Chorus:     return "Chrs";
-        case ModModeId::Flanger:    return "Flgr";
-        case ModModeId::Rotary:     return "Rota";
+        case ModModeId::Chorus:     return "Chorus";
+        case ModModeId::Flanger:    return "Flanger";
+        case ModModeId::Rotary:     return "Rotary";
         case ModModeId::Vibe:       return "Vibe";
-        case ModModeId::Phaser:     return "Phsr";
-        case ModModeId::Filter:     return "Filt";
-        case ModModeId::Formant:    return "Form";
-        case ModModeId::VintTrem:   return "VTrm";
-        case ModModeId::PattTrem:   return "PTrm";
-        case ModModeId::AutoSwell:  return "ASwl";
-        case ModModeId::Destroyer:  return "Dstr";
-        case ModModeId::Quadrature: return "Quad";
+        case ModModeId::Phaser:     return "Phaser";
+        case ModModeId::Filter:     return "Filter";
+        case ModModeId::Formant:    return "Formant";
+        case ModModeId::VintTrem:   return "VinTrem";
+        case ModModeId::PattTrem:   return "PattTrem";
+        case ModModeId::AutoSwell:  return "AutoSwell";
+        case ModModeId::Destroyer:  return "Destroy";
+        case ModModeId::Quadrature: return "Quadrature";
         default:                    return "????";
     }
 }

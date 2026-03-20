@@ -6,8 +6,10 @@ namespace pedal {
 void Controls::QuadEncoder::Init(daisy::Pin a, daisy::Pin b) {
     a_.Init(a, daisy::GPIO::Mode::INPUT, daisy::GPIO::Pull::PULLUP);
     b_.Init(b, daisy::GPIO::Mode::INPUT, daisy::GPIO::Pull::PULLUP);
-    prev_  = ReadState();
-    accum_ = 0;
+    const uint8_t initial = ReadState();
+    raw_prev_ = initial;
+    stable_   = initial;
+    accum_    = 0;
 }
 
 int Controls::QuadEncoder::Poll() {
@@ -18,16 +20,28 @@ int Controls::QuadEncoder::Poll() {
         0,  1, -1,  0,
     };
 
-    const uint8_t curr  = ReadState();
-    const uint8_t index = static_cast<uint8_t>((prev_ << 2) | curr);
-    prev_               = curr;
+    // Shift-register debounce: require two consecutive identical reads
+    // before accepting a new state (filters contact bounce).
+    const uint8_t raw = ReadState();
+    if (raw != raw_prev_) {
+        raw_prev_ = raw;
+        return 0;  // state not yet stable
+    }
+
+    if (raw == stable_) {
+        return 0;  // no change
+    }
+
+    const uint8_t index = static_cast<uint8_t>((stable_ << 2) | raw);
+    stable_ = raw;
     accum_ += kTransitionTable[index];
 
-    if (accum_ >= 4) {
+    // Alps EC11: 2 transitions per detent → threshold ±2.
+    if (accum_ >= 2) {
         accum_ = 0;
         return 1;
     }
-    if (accum_ <= -4) {
+    if (accum_ <= -2) {
         accum_ = 0;
         return -1;
     }

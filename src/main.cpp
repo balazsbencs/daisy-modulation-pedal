@@ -316,6 +316,8 @@ int main() {
                        preset_manager.GetActiveSlot(),
                        ctrl.mode_encoder_held,
                        preset_event,
+                       ctrl.mode_encoder_increment,
+                       ctrl.param_encoder_increment,
                        now);
 
         System::Delay(1);

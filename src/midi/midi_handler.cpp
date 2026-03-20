@@ -46,15 +46,15 @@ bool MidiLearn::TryLearn(uint8_t cc_num) {
 // ---------------------------------------------------------------------------
 
 void MidiHandlerPedal::Init() {
-    // UART MIDI — default config uses UART1 with D14 (RX) / D13 (TX).
-    MidiUartHandler::Config uart_cfg;
-    uart_midi_.Init(uart_cfg);
-    uart_midi_.StartReceive();
-
-    // USB MIDI — class-compliant device mode.
-    MidiUsbHandler::Config usb_cfg;
-    usb_midi_.Init(usb_cfg);
-    usb_midi_.StartReceive();
+    // MIDI disabled during hardware bring-up: both UART and USB DMA/interrupt
+    // handlers stall the main loop when no MIDI device is connected.
+    // TODO: re-enable once audio hardware is attached and system is stable.
+    // MidiUartHandler::Config uart_cfg;
+    // uart_midi_.Init(uart_cfg);
+    // uart_midi_.StartReceive();
+    // MidiUsbHandler::Config usb_cfg;
+    // usb_midi_.Init(usb_cfg);
+    // usb_midi_.StartReceive();
 
     learn_.Init();
 }
@@ -64,16 +64,14 @@ void MidiHandlerPedal::Poll(MidiState& out_state) {
     out_state.clock_tick     = false;
     out_state.clock_stop     = false;
 
-    // Listen() detects framing errors and restarts reception if needed.
-    uart_midi_.Listen();
-    while (uart_midi_.HasEvents()) {
-        ProcessEvent(uart_midi_.PopEvent(), out_state);
-    }
-
-    usb_midi_.Listen();
-    while (usb_midi_.HasEvents()) {
-        ProcessEvent(usb_midi_.PopEvent(), out_state);
-    }
+    // uart_midi_.Listen();
+    // while (uart_midi_.HasEvents()) {
+    //     ProcessEvent(uart_midi_.PopEvent(), out_state);
+    // }
+    // usb_midi_.Listen();
+    // while (usb_midi_.HasEvents()) {
+    //     ProcessEvent(usb_midi_.PopEvent(), out_state);
+    // }
 }
 
 void MidiHandlerPedal::ProcessEvent(const MidiEvent& ev, MidiState& state) {

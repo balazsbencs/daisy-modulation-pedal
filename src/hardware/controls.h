@@ -36,8 +36,9 @@ private:
         uint8_t ReadState();
         daisy::GPIO a_;
         daisy::GPIO b_;
-        uint8_t prev_ = 0;
-        int8_t  accum_ = 0;
+        uint8_t raw_prev_ = 0;   // last raw read (shift-register debounce)
+        uint8_t stable_   = 0;   // debounced stable state
+        int8_t  accum_    = 0;
     };
 
     daisy::Encoder    encoder_;

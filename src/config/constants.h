@@ -24,8 +24,8 @@ constexpr int NUM_POTS = NUM_PARAMS;
 constexpr float POT_SMOOTH = 0.033f;
 
 // Encoder parameter edit behavior.
-constexpr float PARAM_STEP_SLOW = 0.005f;
-constexpr float PARAM_STEP_FAST = 0.015f;
+constexpr float PARAM_STEP_SLOW = 0.02f;
+constexpr float PARAM_STEP_FAST = 0.05f;
 constexpr uint32_t ENCODER_FAST_WINDOW_MS = 40;
 
 // Presets
