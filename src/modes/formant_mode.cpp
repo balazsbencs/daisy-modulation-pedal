@@ -53,9 +53,9 @@ void FormantMode::Prepare(const ParamSet& params) {
     f2_.SetQ(q2);
 }
 
-StereoFrame FormantMode::Process(float input, const ParamSet& /*params*/) {
-    f1_.Process(input);
-    f2_.Process(input);
+StereoFrame FormantMode::Process(StereoFrame input, const ParamSet& /*params*/) {
+    f1_.Process(input.mono());
+    f2_.Process(input.mono());
     // Sum bandpass outputs; scale down to prevent clipping
     float wet = (f1_.bp() + f2_.bp()) * 0.5f;
     wet = dc_.Process(wet);
