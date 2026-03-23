@@ -30,7 +30,8 @@ private:
     class QuadEncoder {
       public:
         void Init(daisy::Pin a, daisy::Pin b);
-        int  Poll();
+        // Called from TIM3 ISR only. Increments `out` by ±1 on completed detent.
+        void IsrPoll(volatile int8_t& out);
 
       private:
         uint8_t ReadState();
@@ -38,14 +39,19 @@ private:
         daisy::GPIO b_;
         uint8_t raw_prev_ = 0;   // last raw read (shift-register debounce)
         uint8_t stable_   = 0;   // debounced stable state
-        int8_t  accum_    = 0;
+        int8_t  accum_    = 0;   // half-transition accumulator (detent = ±2)
     };
 
-    daisy::Encoder    encoder_;
-    QuadEncoder       param_enc_[4];
-    daisy::Switch     sw_bypass_;
-    daisy::Switch     sw_tap_;
-    ControlState      state_{};
+    // TIM3 ISR: polls all 4 param encoders + mode encoder Debounce().
+    static void EncoderIsrCallback(void* data);
+
+    daisy::Encoder     encoder_;
+    QuadEncoder        param_enc_[4];
+    daisy::Switch      sw_bypass_;
+    daisy::Switch      sw_tap_;
+    ControlState       state_{};
+    daisy::TimerHandle enc_timer_;
+    volatile int8_t    isr_delta_[4]{};  // written by ISR, drained by Poll()
 };
 
 } // namespace pedal
