@@ -320,6 +320,5 @@ int main() {
                        ctrl.param_encoder_increment,
                        now);
 
-        System::Delay(1);
     }
 }
