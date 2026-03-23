@@ -74,7 +74,6 @@ private:
     float mix_norm_ = 1.0f;
 
     // Mono-input detection: track IN_R energy with hysteresis.
-    float in_r_energy_ = 0.0f;
     int   mono_count_  = 0;
     bool  is_mono_     = true;   // start mono until proven stereo
 };
