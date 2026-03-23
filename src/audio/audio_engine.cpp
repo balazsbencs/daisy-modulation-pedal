@@ -20,7 +20,6 @@ void AudioEngine::Init(DaisySeed* hw) {
     bypass_dirty_    = false;
     param_buf_[0]    = ParamSet::make_default();
     param_buf_[1]    = ParamSet::make_default();
-    in_r_energy_     = 0.0f;
     mono_count_      = 0;
     is_mono_         = true;
     instance_        = this;
