@@ -153,6 +153,9 @@ void ModulationPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
     const float dry_g = std::cos(angle) * ps.level;
     const float wet_g = std::sin(angle) * ps.level;
 
+    // Note: unlike the firmware, the VST has no mono detection. Stereo input
+    // is passed directly; Tier 2 modes (Flanger, Vibe, etc.) fold to mono
+    // internally via input.mono(), silently discarding the right channel.
     for (int i = 0; i < n; ++i) {
         const pedal::StereoFrame wet = active_mode_->Process(
             pedal::StereoFrame{left[i], right[i]}, ps);
