@@ -43,7 +43,7 @@ void PhaserMode::Prepare(const ParamSet& params) {
     // LFO coefficients computed per-sample in Process() to avoid block-boundary zipper noise.
 }
 
-StereoFrame PhaserMode::Process(float input, const ParamSet& params) {
+StereoFrame PhaserMode::Process(StereoFrame input, const ParamSet& params) {
     const float regen = params.p1 * 0.95f;
 
     // Per-sample LFO values for smooth allpass sweep.
@@ -61,8 +61,8 @@ StereoFrame PhaserMode::Process(float input, const ParamSet& params) {
         if (coeff2 > -0.01f) coeff2 = -0.01f;
         if (coeff2 < -0.99f) coeff2 = -0.99f;
 
-        float xa = input + feedback_  * regen;
-        float xb = input + feedback2_ * regen;
+        float xa = input.mono() + feedback_  * regen;
+        float xb = input.mono() + feedback2_ * regen;
         for (int i = 0; i < 4; ++i) {
             stages_[i].SetCoeff(coeff);
             xa = stages_[i].Process(xa);
@@ -85,7 +85,7 @@ StereoFrame PhaserMode::Process(float input, const ParamSet& params) {
     }
 
     // Normal path: single chain with num_stages_ stages
-    float x = input + feedback_ * regen;
+    float x = input.mono() + feedback_ * regen;
     for (int i = 0; i < num_stages_; ++i) {
         stages_[i].SetCoeff(coeff);
         x = stages_[i].Process(x);

@@ -50,12 +50,13 @@ void QuadratureMode::Prepare(const ParamSet& params) {
     }
 }
 
-StereoFrame QuadratureMode::Process(float input, const ParamSet& params) {
+StereoFrame QuadratureMode::Process(StereoFrame input, const ParamSet& params) {
     // AM (sub_mode_=0) uses raw input for ring-mod; Hilbert is only needed for
     // FM/FreqShift modes. Skip the 8-allpass transform in the AM path.
-    float re = input, im = 0.0f;
+    const float mono = input.mono();
+    float re = mono, im = 0.0f;
     if (sub_mode_ != 0) {
-        auto [r, i] = hilbert_.Process(input);
+        auto [r, i] = hilbert_.Process(mono);
         re = r; im = i;
     }
 
@@ -82,11 +83,11 @@ StereoFrame QuadratureMode::Process(float input, const ParamSet& params) {
             // AM — ring modulation with stereo rotation.
             // Left: always input*cos (ring mod). Right blends from ring to input*-sin.
             // P1=0 → mono ring-mod on both channels; P1=1 → full quadrature stereo.
-            const float ring = input * cos_c;
+            const float ring = mono * cos_c;
             const float p1   = params.p1;
             return {
                 ring,
-                ring * (1.0f - p1) + (input * (-sin_c)) * p1,
+                ring * (1.0f - p1) + (mono * (-sin_c)) * p1,
             };
         }
 
@@ -116,7 +117,7 @@ StereoFrame QuadratureMode::Process(float input, const ParamSet& params) {
         }
 
         default:
-            return {input, input};
+            return {mono, mono};
     }
 }
 

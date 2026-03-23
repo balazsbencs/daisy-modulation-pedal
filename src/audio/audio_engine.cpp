@@ -20,6 +20,8 @@ void AudioEngine::Init(DaisySeed* hw) {
     bypass_dirty_    = false;
     param_buf_[0]    = ParamSet::make_default();
     param_buf_[1]    = ParamSet::make_default();
+    mono_count_      = 0;
+    is_mono_         = true;
     instance_        = this;
 }
 
@@ -76,6 +78,25 @@ void AudioEngine::ProcessBlock(AudioHandle::InputBuffer  in,
     const ParamSet& params = param_buf_[param_read_idx_];
     ModMode*        mode   = mode_;
 
+    // Block-level mono detection: compute mean-square energy of IN_R.
+    // Codec grounds unconnected inputs, so IN_R ≈ 0 when mono cable plugged in.
+    float in_r_energy = 0.0f;
+    for (size_t i = 0; i < size; ++i) {
+        in_r_energy += IN_R[i] * IN_R[i];
+    }
+    in_r_energy /= static_cast<float>(size);
+
+    // Hysteresis: require 3 consecutive blocks below threshold to declare mono,
+    // or 1 block above threshold to declare stereo.
+    static constexpr float kMonoThreshold = 1e-8f;  // -80 dBFS^2
+    if (in_r_energy > kMonoThreshold) {
+        is_mono_    = false;
+        mono_count_ = 0;
+    } else {
+        if (mono_count_ < 3) ++mono_count_;
+        if (mono_count_ >= 3) is_mono_ = true;
+    }
+
     // Constant-power mixing: sin/cos mapping avoids the -3dB dip at 50/50 mix.
     // Recompute only when mix changes; trig is expensive on Cortex-M7.
     if (params.mix != last_mix_) {
@@ -90,19 +111,19 @@ void AudioEngine::ProcessBlock(AudioHandle::InputBuffer  in,
     }
 
     for (size_t i = 0; i < size; ++i) {
-        const float dry = IN_L[i]; // pedal is mono-input
+        const float in_l = IN_L[i];
+        const float in_r = is_mono_ ? in_l : IN_R[i];
 
         if (bypassed_ || mode == nullptr) {
-            // True bypass: route input directly to both outputs.
-            OUT_L[i] = dry;
-            OUT_R[i] = dry;
+            OUT_L[i] = in_l;
+            OUT_R[i] = in_r;
         } else {
             // Wet-only result from the mode; mix is applied here so modes
             // never need to know about the dry path.
-            const StereoFrame wet = mode->Process(dry, params);
+            const StereoFrame wet = mode->Process(StereoFrame{in_l, in_r}, params);
 
-            OUT_L[i] = (dry * mix_dry_ + wet.left  * mix_wet_) * params.level;
-            OUT_R[i] = (dry * mix_dry_ + wet.right * mix_wet_) * params.level;
+            OUT_L[i] = (in_l * mix_dry_ + wet.left  * mix_wet_) * params.level;
+            OUT_R[i] = (in_r * mix_dry_ + wet.right * mix_wet_) * params.level;
         }
     }
 }

@@ -57,12 +57,12 @@ void FilterMode::Prepare(const ParamSet& params) {
     // LFO modes: svf_.SetFreq() called per-sample in Process()
 }
 
-StereoFrame FilterMode::Process(float input, const ParamSet& params) {
+StereoFrame FilterMode::Process(StereoFrame input, const ParamSet& params) {
     if (use_env_) {
         // Envelope follower modulates cutoff.
         // Store the desired cutoff for Prepare() to apply via SetFreq() next block,
         // keeping tanf() out of the per-sample ISR hot path.
-        float env_val = env_.Process(input);  // 0..1
+        float env_val = env_.Process(input.mono());  // 0..1
         if (env_inv_) env_val = 1.0f - env_val;
         const float base_hz = 80.0f + params.tone * 2000.0f; // lower base for auto-wah
         const float cutoff  = base_hz + env_val * params.depth * 3000.0f;
@@ -80,7 +80,7 @@ StereoFrame FilterMode::Process(float input, const ParamSet& params) {
         svf_.SetFreq(cutoff);
     }
 
-    svf_.Process(input);
+    svf_.Process(input.mono());
 
     float wet;
     switch (ftype_) {

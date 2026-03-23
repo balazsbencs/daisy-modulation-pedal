@@ -58,12 +58,12 @@ void ChorusMode::Prepare(const ParamSet& params) {
     // block-boundary delay jumps that cause zipper noise at high LFO rates.
 }
 
-StereoFrame ChorusMode::Process(float input, const ParamSet& params) {
-    float write_in = input;
+StereoFrame ChorusMode::Process(StereoFrame input, const ParamSet& params) {
+    float write_in = input.mono();
 
     // dBucket pre-coloration
     if (sub_mode_ == 0) {
-        write_in = bbd_.Process(input, 0.15f, rand_);
+        write_in = bbd_.Process(write_in, 0.15f, rand_);
     }
 
     s_chorus_line.Write(write_in);

@@ -24,13 +24,12 @@ void VintageTremMode::Prepare(const ParamSet& params) {
     // Gain computed per-sample in Process() to avoid block-boundary zipper noise.
 }
 
-StereoFrame VintageTremMode::Process(float input, const ParamSet& /*params*/) {
+StereoFrame VintageTremMode::Process(StereoFrame input, const ParamSet& /*params*/) {
     // Per-sample LFO for smooth amplitude modulation.
     const float lfo_val = lfo_.Process(); // -1..+1
     float gain = 1.0f - depth_ * (0.5f + 0.5f * lfo_val);
     if (gain < 0.0f) gain = 0.0f;
-    const float wet = input * gain;
-    return {wet, wet};
+    return {input.left * gain, input.right * gain};
 }
 
 } // namespace pedal
