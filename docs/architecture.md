@@ -118,16 +118,28 @@ The `AudioEngine` is unchanged from the delay pedal architecture:
 
 ## Thread Safety
 
-The audio ISR and main loop communicate via a double-buffered `ParamSet[2]` in `AudioEngine`. Main loop writes to the idle buffer and sets `param_dirty_`; the ISR swaps the read index at block entry. No mutexes — relies on aligned-word-store atomicity on Cortex-M7. Never read `param_buf_` from the main loop after calling `SetParams()`.
+Three concurrent execution contexts exist:
+
+| Context | Runs at | Owns |
+|---------|---------|------|
+| Audio ISR (`AudioCallback`) | 1 kHz (48-sample block @ 48 kHz) | `ModMode::Process()`, reads `ParamSet` |
+| TIM3 ISR (`EncoderIsrCallback`) | 500 Hz | `QuadEncoder` state, writes `Controls::isr_delta_[4]`, calls `encoder_.Debounce()` |
+| Main loop | ~30 Hz (display-limited) | Everything else |
+
+**AudioEngine double-buffer:** Main loop writes `ParamSet` to the idle buffer and sets `param_dirty_`; the audio ISR swaps the read index at block entry. No mutexes — relies on aligned-word-store atomicity on Cortex-M7. Never read `param_buf_` from the main loop after calling `SetParams()`.
+
+**Encoder ISR accumulators:** `Controls::isr_delta_[4]` (volatile `int8_t`) is written exclusively by the TIM3 ISR and drained by `Controls::Poll()` under a brief `__disable_irq()` / `__enable_irq()` critical section. `QuadEncoder` internal state (`raw_prev_`, `stable_`, `accum_`) is owned exclusively by the TIM3 ISR — never accessed from the main loop.
+
+**Mode encoder (`daisy::Encoder`):** `Debounce()` is called exclusively from the TIM3 ISR. `Increment()`, `FallingEdge()`, `Pressed()` are read-only accessors called from the main loop — single-writer / single-reader, no mutex required.
 
 ## Flash Constraint
 
-FLASH is at ~93% capacity (128 KB total) in the delay pedal. The modulation pedal replaces 10 delay modes with 12 modulation modes of comparable complexity. Monitor flash usage carefully:
+FLASH is at ~85% capacity (128 KB total). Monitor flash usage carefully after adding new features:
 
 - Prefer inline functions and compile-time constants over lookup tables
 - Avoid string literals beyond mode/sub-mode names
 - Use `-Os` optimization
-- Consider LTO or QSPI boot if needed
+- Consider LTO or QSPI boot if approaching 100%
 
 ## VST Plugin
 

@@ -116,7 +116,7 @@ The audio ISR and main loop communicate via a double-buffered `ParamSet[2]` in `
 
 ### Flash Constraint
 
-FLASH is at ~93% capacity (128 KB total). Be conservative when adding new features — avoid string literals, large lookup tables, or additional template instantiations. The modulation pedal replaces 10 delay modes with 12 modulation modes; monitor flash usage after each mode addition.
+FLASH is at ~85% capacity (128 KB total). Be conservative when adding new features — avoid string literals, large lookup tables, or additional template instantiations. The modulation pedal replaces 10 delay modes with 12 modulation modes; monitor flash usage after each mode addition.
 
 ### VST Plugin vs Firmware
 

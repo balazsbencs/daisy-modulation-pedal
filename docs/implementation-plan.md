@@ -212,7 +212,7 @@ Each phase includes VST updates so the plugin stays in sync with firmware DSP co
 
 | Risk | Mitigation |
 |------|------------|
-| Flash overflow (128 KB) | Monitor after each mode; enable LTO; consider QSPI boot |
+| Flash overflow (128 KB) | Currently at ~85%; monitor after each mode; enable LTO; consider QSPI boot |
 | CPU overload (48 kHz × 48 block) | Profile each mode; Phaser 16-stage and Quadrature are heaviest |
 | SDRAM contention | All buffers are short (~25 KB total) — very low risk |
 | Through-zero flanger clicks | Careful zero-crossing interpolation; 2 ms crossfade at zero |
