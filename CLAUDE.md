@@ -81,7 +81,7 @@ Encoders / MIDI CC / Preset recall
 - `Init()` — called once at startup
 - `Reset()` — called on mode switch to clear state / buffers
 - `Prepare(const ParamSet&)` — optional per-block setup (e.g. set filter coefficients)
-- `Process(float, const ParamSet&) → StereoFrame` — per-sample DSP, returns **wet signal only**
+- `Process(StereoFrame, const ParamSet&) → StereoFrame` — per-sample DSP, returns **wet signal only**
 
 `ModeRegistry` owns all 12 statically-allocated mode instances. Mode switching is a pointer swap + `Reset()` — no allocation, no audio dropout beyond the state clear.
 
