@@ -63,7 +63,7 @@ StereoFrame ChorusMode::Process(StereoFrame input, const ParamSet& params) {
 
     // dBucket pre-coloration
     if (sub_mode_ == 0) {
-        write_in = bbd_.Process(input.mono(), 0.15f, rand_);
+        write_in = bbd_.Process(write_in, 0.15f, rand_);
     }
 
     s_chorus_line.Write(write_in);
