@@ -10,8 +10,8 @@ public:
     explicit PassthroughMode(const char* name) : name_(name) {}
     void Init() override {}
     void Reset() override {}
-    StereoFrame Process(float input, const ParamSet& /*params*/) override {
-        return {input, input};
+    StereoFrame Process(StereoFrame input, const ParamSet& /*params*/) override {
+        return input;
     }
     const char* Name() const override { return name_; }
 private:
