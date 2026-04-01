@@ -191,12 +191,18 @@ int main() {
                 }
                 preset_manager.SetActiveSlot(slot);
             } else {
-                int idx = static_cast<int>(current_mode) + ctrl.mode_encoder_increment;
-                if (idx < 0) {
-                    idx = pedal::NUM_MODES - 1;
-                }
-                if (idx >= pedal::NUM_MODES) {
-                    idx = 0;
+                int idx = static_cast<int>(current_mode);
+                int inc = ctrl.mode_encoder_increment;
+                const int dir = inc > 0 ? 1 : -1;
+                while (inc != 0) {
+                    idx += dir;
+                    if (idx < 0) {
+                        idx = pedal::NUM_MODES - 1;
+                    }
+                    if (idx >= pedal::NUM_MODES) {
+                        idx = 0;
+                    }
+                    inc -= dir;
                 }
                 ActivateMode(static_cast<pedal::ModModeId>(idx));
             }

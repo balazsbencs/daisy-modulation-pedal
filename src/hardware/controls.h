@@ -51,7 +51,8 @@ private:
     daisy::Switch      sw_tap_;
     ControlState       state_{};
     daisy::TimerHandle enc_timer_;
-    volatile int8_t    isr_delta_[4]{};  // written by ISR, drained by Poll()
+    volatile int8_t    isr_delta_[4]{};       // written by ISR, drained by Poll()
+    volatile int8_t    isr_mode_delta_ = 0;  // mode encoder ISR accumulator
 };
 
 } // namespace pedal

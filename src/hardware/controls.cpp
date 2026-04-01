@@ -55,7 +55,13 @@ void Controls::EncoderIsrCallback(void* data) {
         self->param_enc_[i].IsrPoll(self->isr_delta_[i]);
     }
     // Mode encoder debounced here exclusively — not in Poll().
+    // Read Increment() immediately after Debounce() (same ISR context)
+    // so the result isn't lost before the main loop drains it.
     self->encoder_.Debounce();
+    int32_t inc = self->encoder_.Increment();
+    if (inc != 0) {
+        self->isr_mode_delta_ += static_cast<int8_t>(inc);
+    }
 }
 
 void Controls::Init(daisy::DaisySeed& hw) {
@@ -82,13 +88,16 @@ void Controls::Init(daisy::DaisySeed& hw) {
 }
 
 void Controls::Poll() {
-    // Drain ISR accumulators atomically. ISR is sole writer of isr_delta_.
+    // Drain ISR accumulators atomically. ISR is sole writer.
     int param_delta[4];
+    int mode_delta;
     __disable_irq();
     for (int i = 0; i < 4; ++i) {
         param_delta[i] = isr_delta_[i];
         isr_delta_[i]  = 0;
     }
+    mode_delta = isr_mode_delta_;
+    isr_mode_delta_ = 0;
     __enable_irq();
 
     // Switches debounced at main-loop rate (slow transitions, no ISR needed).
@@ -100,7 +109,7 @@ void Controls::Poll() {
         state_.param_encoder_increment[i] = param_delta[i];
     }
 
-    state_.mode_encoder_increment = encoder_.Increment();
+    state_.mode_encoder_increment = mode_delta;
     state_.mode_encoder_pressed   = encoder_.FallingEdge();
     state_.mode_encoder_held      = encoder_.Pressed();
     state_.bypass_pressed  = sw_bypass_.RisingEdge();
