@@ -49,11 +49,15 @@ float Lfo::Process() {
         out = lfo_compute(phase_, wave_);
     }
     phase_ += phase_inc_;
+    // Normalize phase to [0, 2π) for both positive and negative increments
     while (phase_ >= TWO_PI) {
         phase_ -= TWO_PI;
         // New S&H sample on cycle wrap
         rand_     = rand_ * 1664525u + 1013904223u;
         sh_value_ = static_cast<float>(static_cast<int32_t>(rand_)) * (1.0f / 2147483648.0f);
+    }
+    while (phase_ < 0.0f) {
+        phase_ += TWO_PI;
     }
     return out;
 }
@@ -66,10 +70,14 @@ float Lfo::PrepareBlock() {
         out = lfo_compute(phase_, wave_);
     }
     phase_ += phase_inc_ * static_cast<float>(BLOCK_SIZE);
+    // Normalize phase to [0, 2π) for both positive and negative increments
     while (phase_ >= TWO_PI) {
         phase_ -= TWO_PI;
         rand_     = rand_ * 1664525u + 1013904223u;
         sh_value_ = static_cast<float>(static_cast<int32_t>(rand_)) * (1.0f / 2147483648.0f);
+    }
+    while (phase_ < 0.0f) {
+        phase_ += TWO_PI;
     }
     return out;
 }
