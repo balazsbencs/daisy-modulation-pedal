@@ -17,6 +17,7 @@ void DelayLineSdram::Reset() {
 }
 
 void DelayLineSdram::SetDelay(float delay_samples) {
+    if (delay_samples < 1.0f) delay_samples = 1.0f;  // guard negative / near-zero
     size_t int_part = static_cast<size_t>(delay_samples);
     frac_  = delay_samples - static_cast<float>(int_part);
     if (int_part < 1)     int_part = 1;          // guard zero-latency read

@@ -49,7 +49,7 @@ float Lfo::Process() {
         out = lfo_compute(phase_, wave_);
     }
     phase_ += phase_inc_;
-    if (phase_ >= TWO_PI) {
+    while (phase_ >= TWO_PI) {
         phase_ -= TWO_PI;
         // New S&H sample on cycle wrap
         rand_     = rand_ * 1664525u + 1013904223u;
