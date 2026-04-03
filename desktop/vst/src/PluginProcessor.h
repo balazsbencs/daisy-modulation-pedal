@@ -1,6 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include <atomic>
 
 #include "modes/mode_registry.h"
 #include "config/mod_mode_id.h"
@@ -39,7 +40,6 @@ public:
 
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     juce::AudioProcessorValueTreeState& parameters() { return apvts_; }
-    pedal::ModModeId getCurrentMode() const { return current_mode_; }
 
 private:
     // host_period_s: beat-derived LFO period override in seconds, or -1 if none.
@@ -49,18 +49,20 @@ private:
     juce::AudioProcessorValueTreeState apvts_;
 
     pedal::ModeRegistry mode_registry_;
-    pedal::ModModeId    current_mode_ = pedal::ModModeId::Chorus;
+    std::atomic<pedal::ModModeId> current_mode_ {pedal::ModModeId::Chorus};
     pedal::ModMode*     active_mode_  = nullptr;
+    juce::SpinLock      modeLock_;
 
-    // Per-mode memory for P1 and P2 normalized values.
-    float p1_per_mode_[12];
-    float p2_per_mode_[12];
+    // Per-mode memory for P1 and P2 normalized values (atomic for cross-thread access).
+    std::atomic<float> p1_per_mode_[pedal::NUM_MODES];
+    std::atomic<float> p2_per_mode_[pedal::NUM_MODES];
 
 public:
-    float getP1ForMode(int mode) const { return p1_per_mode_[juce::jlimit(0, 11, mode)]; }
-    float getP2ForMode(int mode) const { return p2_per_mode_[juce::jlimit(0, 11, mode)]; }
-    void  saveP1ForMode(int mode, float v) { p1_per_mode_[juce::jlimit(0, 11, mode)] = v; }
-    void  saveP2ForMode(int mode, float v) { p2_per_mode_[juce::jlimit(0, 11, mode)] = v; }
+    pedal::ModModeId getCurrentMode() const { return current_mode_.load(std::memory_order_acquire); }
+    float getP1ForMode(int mode) const { return p1_per_mode_[juce::jlimit(0, pedal::NUM_MODES - 1, mode)].load(std::memory_order_relaxed); }
+    float getP2ForMode(int mode) const { return p2_per_mode_[juce::jlimit(0, pedal::NUM_MODES - 1, mode)].load(std::memory_order_relaxed); }
+    void  saveP1ForMode(int mode, float v) { p1_per_mode_[juce::jlimit(0, pedal::NUM_MODES - 1, mode)].store(v, std::memory_order_relaxed); }
+    void  saveP2ForMode(int mode, float v) { p2_per_mode_[juce::jlimit(0, pedal::NUM_MODES - 1, mode)].store(v, std::memory_order_relaxed); }
 
 private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ModulationPluginProcessor)
