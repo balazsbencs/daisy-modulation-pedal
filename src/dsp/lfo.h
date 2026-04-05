@@ -21,8 +21,12 @@ public:
     void SetRate(float rate_hz);
     void SetWave(LfoWave wave) { wave_ = wave; }
     void SetPhaseOffset(float offset_radians) {
-        // Normalize to [0, 2π) to satisfy fast_sin() contract
         static constexpr float TWO_PI = 6.28318530717958647692f;
+        // Guard against NaN, Inf, or huge values that would spin the while-loop
+        if (offset_radians != offset_radians || offset_radians > 1e6f || offset_radians < -1e6f) {
+            phase_offset_ = 0.0f;
+            return;
+        }
         while (offset_radians >= TWO_PI) offset_radians -= TWO_PI;
         while (offset_radians < 0.0f) offset_radians += TWO_PI;
         phase_offset_ = offset_radians;
