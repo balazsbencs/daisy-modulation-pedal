@@ -32,7 +32,9 @@ void PhaserMode::Prepare(const ParamSet& params) {
     lfo2_.SetRate(params.speed);
 
     // Sub-mode from p2: 0..6 → stage counts (6 = Barber Pole)
-    const int sub = static_cast<int>(params.p2 * 6.999f);
+    int sub = static_cast<int>(params.p2 * 6.999f);
+    if (sub < 0) sub = 0;
+    if (sub > 6) sub = 6;
     barber_pole_ = (sub == 6);
     num_stages_  = kStageCounts[sub];
 

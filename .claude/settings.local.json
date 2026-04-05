@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make -j4)",
+      "Bash(make)",
+      "Bash(make size:*)",
+      "Bash(arm-none-eabi-size /Users/bbalazs/daisy/modulation/build/modulation.elf)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(grep -E \"\\\\.md$|^d\")",
+      "Bash(wc -l /Users/bbalazs/daisy/modulation/src/modes/*.cpp /Users/bbalazs/daisy/modulation/src/modes/*.h)",
+      "Bash(rm -rf *)",
+      "Bash(cmake .. -DCMAKE_BUILD_TYPE=Release)",
+      "Bash(make clean:*)"
+    ]
+  }
+}

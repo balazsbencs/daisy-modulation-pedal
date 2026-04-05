@@ -30,6 +30,12 @@ void ChorusMode::Reset() {
     dc_r_.Init();
     bbd_.Reset();
     rand_ = 12345;
+    sub_mode_   = 4;
+    base_samps_ = 48.0f;
+    mod_depth_  = 0.0f;
+    delays_[0]  = 0.0f;
+    delays_[1]  = 0.0f;
+    delays_[2]  = 0.0f;
 }
 
 void ChorusMode::Prepare(const ParamSet& params) {

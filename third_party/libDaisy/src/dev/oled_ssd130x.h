@@ -48,10 +48,22 @@ class SSD130xI2CTransport
 
     void SendData(uint8_t* buff, size_t size)
     {
-        for(size_t i = 0; i < size; i++)
+        // Batch send: prefix 0x40 (Co=0, D/C#=1) then all data bytes
+        // in a single I2C transaction instead of one-per-byte.
+        // Max chunk 129 bytes (1 prefix + 128 data) fits one OLED page row.
+        static constexpr size_t kChunk = 128;
+        uint8_t txbuf[kChunk + 1];
+        txbuf[0] = 0x40;
+        while(size > 0)
         {
-            uint8_t buf[2] = {0X40, buff[i]};
-            i2c_.TransmitBlocking(i2c_address_, buf, 2, 1000);
+            size_t n = (size > kChunk) ? kChunk : size;
+            for(size_t i = 0; i < n; i++)
+            {
+                txbuf[1 + i] = *buff++;
+            }
+            i2c_.TransmitBlocking(
+                i2c_address_, txbuf, static_cast<uint16_t>(n + 1), 1000);
+            size -= n;
         }
     };
 
@@ -392,7 +404,7 @@ class SSD130xDriver
         for(i = 0; i < (height / 8); i++)
         {
             transport_.SendCommand(0xB0 + i);
-            transport_.SendCommand(0x00);
+            transport_.SendCommand(0x02); // SH1106: visible area starts at column 2
             transport_.SendCommand(high_column_addr);
             transport_.SendData(&buffer_[width * i], width);
         }
