@@ -2,6 +2,7 @@
 #include "mod_mode.h"
 #include "../dsp/hilbert_transform.h"
 #include "../dsp/lfo.h"
+#include "../dsp/dc_blocker.h"
 
 namespace pedal {
 
@@ -27,6 +28,7 @@ public:
 private:
     HilbertTransform hilbert_;
     Lfo              lfo_;             // FM vibrato LFO
+    DcBlocker        dc_;              // DC removal for AM path
     float            carrier_phase_ = 0.0f;  // [0, 2π)
     float            phase_inc_     = 0.0f;  // radians per sample (non-FM modes)
     int              sub_mode_      = 0;     // 0=AM 1=FM 2=Shift+ 3=Shift-
