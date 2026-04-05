@@ -10,6 +10,7 @@ void DestroyerMode::Init() {
 
 void DestroyerMode::Reset() {
     svf_.Reset();
+    dc_.Init();
     held_sample_  = 0.0f;
     decimate_acc_ = 0.0f;
     decimate_rate_= 1.0f;
@@ -63,6 +64,7 @@ StereoFrame DestroyerMode::Process(StereoFrame input, const ParamSet& params) {
         wet += noise;
     }
 
+    wet = dc_.Process(wet);
     return {wet, wet};
 }
 
