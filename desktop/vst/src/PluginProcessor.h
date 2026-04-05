@@ -47,6 +47,7 @@ private:
     void ensureModeFromParam();
 
     juce::AudioProcessorValueTreeState apvts_;
+    float sample_rate_ = pedal::SAMPLE_RATE;
 
     pedal::ModeRegistry mode_registry_;
     std::atomic<pedal::ModModeId> current_mode_ {pedal::ModModeId::Chorus};

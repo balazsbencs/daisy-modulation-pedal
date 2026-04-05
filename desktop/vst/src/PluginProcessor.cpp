@@ -56,7 +56,8 @@ ModulationPluginProcessor::ModulationPluginProcessor()
     }
 }
 
-void ModulationPluginProcessor::prepareToPlay(double, int) {
+void ModulationPluginProcessor::prepareToPlay(double sampleRate, int) {
+    sample_rate_ = static_cast<float>(sampleRate);
     ensureModeFromParam();
     if (active_mode_ != nullptr) {
         active_mode_->Reset();
@@ -100,6 +101,12 @@ pedal::ParamSet ModulationPluginProcessor::buildParamsFromState(float host_perio
     ps.p1    = map_param(n_p1,    get_param_range(mode, ParamId::P1));
     ps.p2    = map_param(n_p2,    get_param_range(mode, ParamId::P2));
     ps.level = map_param(n_level, get_param_range(mode, ParamId::Level));
+
+    // Rescale speed from 48kHz-based mapping to the actual host sample rate.
+    if (sample_rate_ > 0.0f && sample_rate_ != pedal::SAMPLE_RATE) {
+        ps.speed *= sample_rate_ / pedal::SAMPLE_RATE;
+    }
+
     return ps;
 }
 
@@ -206,7 +213,10 @@ void ModulationPluginProcessor::setStateInformation(const void* data, int sizeIn
     if (xmlState == nullptr) return;
     if (!xmlState->hasTagName(apvts_.state.getType())) return;
 
-    // Restore per-mode P1/P2 values (graceful fallback if absent — old state).
+    // Replace APVTS state first (triggers parameter listeners).
+    apvts_.replaceState(juce::ValueTree::fromXml(*xmlState));
+
+    // Then restore per-mode P1/P2 — these won't be clobbered by listeners now.
     if (auto* perMode = xmlState->getChildByName("PerModeParams")) {
         for (auto* el : perMode->getChildWithTagNameIterator("Mode")) {
             const int m = el->getIntAttribute("index", -1);
@@ -217,7 +227,6 @@ void ModulationPluginProcessor::setStateInformation(const void* data, int sizeIn
         }
     }
 
-    apvts_.replaceState(juce::ValueTree::fromXml(*xmlState));
     ensureModeFromParam();
 }
 
