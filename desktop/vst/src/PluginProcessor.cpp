@@ -88,8 +88,9 @@ pedal::ParamSet ModulationPluginProcessor::buildParamsFromState(float host_perio
 
     ParamSet ps;
     // AutoSwell uses speed as attack time (seconds), not Hz — skip tempo sync.
+    // Destroyer uses speed as decimation rate (1×–48×), not Hz — skip tempo sync.
     // All other modes: clamp to the mode-specific speed range max.
-    if (host_period_s > 0.0f && mode != ModModeId::AutoSwell) {
+    if (host_period_s > 0.0f && mode != ModModeId::AutoSwell && mode != ModModeId::Destroyer) {
         const float max_hz = get_param_range(mode, ParamId::Speed).max;
         ps.speed = juce::jlimit(0.05f, max_hz, 1.0f / host_period_s);
     } else {
