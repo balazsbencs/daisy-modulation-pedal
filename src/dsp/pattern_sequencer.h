@@ -17,7 +17,8 @@ public:
 
     /// Set the period of one beat in samples (48000 = 1 beat/sec).
     void SetPeriodSamples(float samples_per_beat) {
-        period_ = (samples_per_beat > 1.0f) ? samples_per_beat : 1.0f;
+        period_ = (samples_per_beat > 1.0f)
+            ? static_cast<int>(samples_per_beat + 0.5f) : 1;
     }
 
     /// Set active pattern (0–15) and subdivision (1, 2, or 3 = triplet).
@@ -29,10 +30,11 @@ public:
 
     /// Advance one sample. Returns current step gate (0.0 or 1.0).
     float Process() {
-        const float step_samples = period_ / static_cast<float>(steps_per_beat_);
-        sample_counter_ += 1.0f;
-        if (sample_counter_ >= step_samples) {
-            sample_counter_ -= step_samples;
+        const int step_samples = period_ / steps_per_beat_;
+        const int threshold = (step_samples > 0) ? step_samples : 1;
+        ++sample_counter_;
+        if (sample_counter_ >= threshold) {
+            sample_counter_ -= threshold;
             current_step_ = (current_step_ + 1) % 16;
             step_active_  = GetStep(pattern_idx_, current_step_);
         }
@@ -65,11 +67,11 @@ private:
         return (kPatterns[pattern] >> (15 - step)) & 1;
     }
 
-    float    period_         = SAMPLE_RATE; // samples per beat
-    float    sample_counter_ = 0.0f;
+    int      period_         = static_cast<int>(SAMPLE_RATE);
+    int      sample_counter_ = 0;
     int      current_step_   = 0;
     int      pattern_idx_    = 0;
-    int      steps_per_beat_ = 4;           // 4 = 16th notes per beat
+    int      steps_per_beat_ = 4;
     bool     step_active_    = true;
 };
 
