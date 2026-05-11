@@ -22,8 +22,12 @@ private:
     Svf      f1_, f2_;   // formant 1 and 2 bandpass filters
     DcBlocker dc_;
 
-    float f1_hz_ = 500.0f;
-    float f2_hz_ = 1500.0f;
+    float f1_hz_       = 500.0f;
+    float f2_hz_       = 1500.0f;
+    float target_f1_   = 500.0f;
+    float target_f2_   = 1500.0f;
+    float morph_depth_ = 0.5f;
+    int   update_count_ = 0;
 };
 
 } // namespace pedal

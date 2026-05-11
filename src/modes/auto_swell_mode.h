@@ -25,7 +25,6 @@ private:
     float swell_gain_  = 0.0f;   // current swell gain 0..1
     float swell_coef_  = 0.001f;   // IIR coef for gain rise (signal absent → swell opens)
     float duck_coef_   = 0.0001f;  // IIR coef for gain fall (signal present → gain killed)
-    bool  swelling_    = false;
 };
 
 } // namespace pedal

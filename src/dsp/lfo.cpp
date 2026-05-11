@@ -58,6 +58,8 @@ float Lfo::Process() {
     }
     while (phase_ < 0.0f) {
         phase_ += TWO_PI;
+        rand_     = rand_ * 1664525u + 1013904223u;
+        sh_value_ = static_cast<float>(static_cast<int32_t>(rand_)) * (1.0f / 2147483648.0f);
     }
     return out;
 }
@@ -78,6 +80,8 @@ float Lfo::PrepareBlock() {
     }
     while (phase_ < 0.0f) {
         phase_ += TWO_PI;
+        rand_     = rand_ * 1664525u + 1013904223u;
+        sh_value_ = static_cast<float>(static_cast<int32_t>(rand_)) * (1.0f / 2147483648.0f);
     }
     return out;
 }

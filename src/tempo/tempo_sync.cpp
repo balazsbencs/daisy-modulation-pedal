@@ -53,6 +53,8 @@ void TempoSync::Process(uint32_t now_ms) {
         if (silence > MIDI_CLOCK_TIMEOUT_MS) {
             midi_active_   = false;
             midi_period_s_ = -1.0f;
+            clock_count_   = 0;
+            last_beat_ms_  = 0;
         }
     }
 

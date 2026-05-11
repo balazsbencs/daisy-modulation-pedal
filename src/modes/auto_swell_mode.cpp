@@ -24,7 +24,6 @@ void AutoSwellMode::Reset() {
     dc_.Init();
     dc_r_.Init();
     swell_gain_  = 0.0f;
-    swelling_    = false;
 }
 
 void AutoSwellMode::Prepare(const ParamSet& params) {

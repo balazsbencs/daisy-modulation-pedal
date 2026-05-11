@@ -105,8 +105,9 @@ static pedal::ParamSet BuildParams(const ParamEditState& edit,
     ps.level = map_param(edit.norm[6], get_param_range(mode, ParamId::Level));
 
     // AutoSwell uses speed as attack time (seconds), not Hz — skip override.
+    // Destroyer uses speed as decimation rate (1×–48×), not Hz — skip override.
     // All other modes: clamp to the mode-specific speed range max.
-    if (speed_override > 0.0f && mode != pedal::ModModeId::AutoSwell) {
+    if (speed_override > 0.0f && mode != pedal::ModModeId::AutoSwell && mode != pedal::ModModeId::Destroyer) {
         const float rate_hz = 1.0f / speed_override;
         const float max_hz  = pedal::get_param_range(mode, pedal::ParamId::Speed).max;
         ps.speed = (rate_hz < max_hz) ? rate_hz : max_hz;

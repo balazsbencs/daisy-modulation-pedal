@@ -40,23 +40,24 @@ ModulationPluginProcessor::ModulationPluginProcessor()
                          .withOutput("Output", juce::AudioChannelSet::stereo(), true))
     , apvts_(*this, nullptr, "PARAMS", createParameterLayout()) {
     mode_registry_.Init();
-    active_mode_ = mode_registry_.get(current_mode_);
+    active_mode_ = mode_registry_.get(current_mode_.load(std::memory_order_relaxed));
     active_mode_->Reset();
 
     // Initialise per-mode P1/P2 to sensible defaults.
     for (int m = 0; m < 12; ++m) {
         const auto& si1 = kSubmodeInfo[m][0];
         const auto& si2 = kSubmodeInfo[m][1];
-        p1_per_mode_[m] = si1.is_discrete
+        p1_per_mode_[m].store(si1.is_discrete
             ? (1.0f / (2.0f * si1.num_choices))   // midpoint of choice 0
-            : 0.5f;
-        p2_per_mode_[m] = si2.is_discrete
+            : 0.5f, std::memory_order_relaxed);
+        p2_per_mode_[m].store(si2.is_discrete
             ? (1.0f / (2.0f * si2.num_choices))
-            : 0.5f;
+            : 0.5f, std::memory_order_relaxed);
     }
 }
 
-void ModulationPluginProcessor::prepareToPlay(double, int) {
+void ModulationPluginProcessor::prepareToPlay(double sampleRate, int) {
+    sample_rate_ = static_cast<float>(sampleRate);
     ensureModeFromParam();
     if (active_mode_ != nullptr) {
         active_mode_->Reset();
@@ -83,21 +84,30 @@ pedal::ParamSet ModulationPluginProcessor::buildParamsFromState(float host_perio
     const float n_p2    = clamp01(getParam(apvts_, "p2"));
     const float n_level = clamp01(getParam(apvts_, "level"));
 
+    const auto mode = current_mode_.load(std::memory_order_acquire);
+
     ParamSet ps;
     // AutoSwell uses speed as attack time (seconds), not Hz — skip tempo sync.
+    // Destroyer uses speed as decimation rate (1×–48×), not Hz — skip tempo sync.
     // All other modes: clamp to the mode-specific speed range max.
-    if (host_period_s > 0.0f && current_mode_ != ModModeId::AutoSwell) {
-        const float max_hz = get_param_range(current_mode_, ParamId::Speed).max;
+    if (host_period_s > 0.0f && mode != ModModeId::AutoSwell && mode != ModModeId::Destroyer) {
+        const float max_hz = get_param_range(mode, ParamId::Speed).max;
         ps.speed = juce::jlimit(0.05f, max_hz, 1.0f / host_period_s);
     } else {
-        ps.speed = map_param(n_speed, get_param_range(current_mode_, ParamId::Speed));
+        ps.speed = map_param(n_speed, get_param_range(mode, ParamId::Speed));
     }
-    ps.depth = map_param(n_depth, get_param_range(current_mode_, ParamId::Depth));
-    ps.mix   = map_param(n_mix,   get_param_range(current_mode_, ParamId::Mix));
-    ps.tone  = map_param(n_tone,  get_param_range(current_mode_, ParamId::Tone));
-    ps.p1    = map_param(n_p1,    get_param_range(current_mode_, ParamId::P1));
-    ps.p2    = map_param(n_p2,    get_param_range(current_mode_, ParamId::P2));
-    ps.level = map_param(n_level, get_param_range(current_mode_, ParamId::Level));
+    ps.depth = map_param(n_depth, get_param_range(mode, ParamId::Depth));
+    ps.mix   = map_param(n_mix,   get_param_range(mode, ParamId::Mix));
+    ps.tone  = map_param(n_tone,  get_param_range(mode, ParamId::Tone));
+    ps.p1    = map_param(n_p1,    get_param_range(mode, ParamId::P1));
+    ps.p2    = map_param(n_p2,    get_param_range(mode, ParamId::P2));
+    ps.level = map_param(n_level, get_param_range(mode, ParamId::Level));
+
+    // Rescale speed from 48kHz-based mapping to the actual host sample rate.
+    if (sample_rate_ > 0.0f && sample_rate_ != pedal::SAMPLE_RATE) {
+        ps.speed *= sample_rate_ / pedal::SAMPLE_RATE;
+    }
+
     return ps;
 }
 
@@ -105,10 +115,11 @@ void ModulationPluginProcessor::ensureModeFromParam() {
     const int next_mode = juce::jlimit(0, pedal::NUM_MODES - 1,
         (int)std::lround(getParam(apvts_, "mode")));
     const auto next_id = static_cast<pedal::ModModeId>(next_mode);
-    if (next_id == current_mode_) return;
+    if (next_id == current_mode_.load(std::memory_order_acquire)) return;
 
-    current_mode_ = next_id;
-    active_mode_  = mode_registry_.get(current_mode_);
+    const juce::SpinLock::ScopedLockType lock(modeLock_);
+    current_mode_.store(next_id, std::memory_order_release);
+    active_mode_  = mode_registry_.get(next_id);
     if (active_mode_ != nullptr) active_mode_->Reset();
 }
 
@@ -191,8 +202,8 @@ void ModulationPluginProcessor::getStateInformation(juce::MemoryBlock& destData)
     for (int m = 0; m < 12; ++m) {
         auto* el = perMode->createNewChildElement("Mode");
         el->setAttribute("index", m);
-        el->setAttribute("p1", (double)p1_per_mode_[m]);
-        el->setAttribute("p2", (double)p2_per_mode_[m]);
+        el->setAttribute("p1", (double)p1_per_mode_[m].load(std::memory_order_relaxed));
+        el->setAttribute("p2", (double)p2_per_mode_[m].load(std::memory_order_relaxed));
     }
 
     copyXmlToBinary(*xml, destData);
@@ -203,18 +214,20 @@ void ModulationPluginProcessor::setStateInformation(const void* data, int sizeIn
     if (xmlState == nullptr) return;
     if (!xmlState->hasTagName(apvts_.state.getType())) return;
 
-    // Restore per-mode P1/P2 values (graceful fallback if absent — old state).
+    // Replace APVTS state first (triggers parameter listeners).
+    apvts_.replaceState(juce::ValueTree::fromXml(*xmlState));
+
+    // Then restore per-mode P1/P2 — these won't be clobbered by listeners now.
     if (auto* perMode = xmlState->getChildByName("PerModeParams")) {
         for (auto* el : perMode->getChildWithTagNameIterator("Mode")) {
             const int m = el->getIntAttribute("index", -1);
             if (m >= 0 && m < 12) {
-                p1_per_mode_[m] = (float)el->getDoubleAttribute("p1", p1_per_mode_[m]);
-                p2_per_mode_[m] = (float)el->getDoubleAttribute("p2", p2_per_mode_[m]);
+                p1_per_mode_[m].store((float)el->getDoubleAttribute("p1", p1_per_mode_[m].load(std::memory_order_relaxed)), std::memory_order_relaxed);
+                p2_per_mode_[m].store((float)el->getDoubleAttribute("p2", p2_per_mode_[m].load(std::memory_order_relaxed)), std::memory_order_relaxed);
             }
         }
     }
 
-    apvts_.replaceState(juce::ValueTree::fromXml(*xmlState));
     ensureModeFromParam();
 }
 

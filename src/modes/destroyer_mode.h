@@ -1,6 +1,7 @@
 #pragma once
 #include "mod_mode.h"
 #include "../dsp/svf.h"
+#include "../dsp/dc_blocker.h"
 
 namespace pedal {
 
@@ -20,6 +21,7 @@ public:
 
 private:
     Svf      svf_;
+    DcBlocker dc_;
     float    held_sample_  = 0.0f;
     float    decimate_acc_ = 0.0f;
     float    decimate_rate_= 1.0f;  // samples between hold updates (= params.speed)

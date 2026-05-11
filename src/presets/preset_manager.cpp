@@ -44,17 +44,28 @@ bool PresetManager::PresetStorageState::operator!=(const PresetStorageState& oth
 }
 
 uint32_t PresetManager::ComputeCrc(const PresetStorageState& state) {
-    PresetStorageState copy = state;
-    copy.crc               = 0;
-
-    const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&copy);
-    const size_t   len   = sizeof(PresetStorageState);
-
     uint32_t hash = 2166136261u; // FNV-1a
-    for (size_t i = 0; i < len; ++i) {
-        hash ^= bytes[i];
-        hash *= 16777619u;
+
+    // Hash header fields explicitly (without padding)
+    auto hash_bytes = [&](const uint8_t* data, size_t len) {
+        for (size_t i = 0; i < len; ++i) {
+            hash ^= data[i];
+            hash *= 16777619u;
+        }
+    };
+
+    hash_bytes(reinterpret_cast<const uint8_t*>(&state.magic), sizeof(state.magic));
+    hash_bytes(reinterpret_cast<const uint8_t*>(&state.version), sizeof(state.version));
+    hash_bytes(reinterpret_cast<const uint8_t*>(&state.active_slot), sizeof(state.active_slot));
+
+    // Hash preset slots
+    for (int i = 0; i < PRESET_SLOT_COUNT; ++i) {
+        const PresetSlot& slot = state.slots[i];
+        hash_bytes(reinterpret_cast<const uint8_t*>(&slot.valid), sizeof(slot.valid));
+        hash_bytes(reinterpret_cast<const uint8_t*>(&slot.mode), sizeof(slot.mode));
+        hash_bytes(reinterpret_cast<const uint8_t*>(slot.norm), sizeof(slot.norm));
     }
+
     return hash;
 }
 
@@ -124,10 +135,15 @@ bool PresetManager::LoadSlot(int slot,
         out_norm[i] = Clamp01(ps.norm[i]);
     }
 
-    active_slot_    = s;
-    st.active_slot  = static_cast<uint16_t>(s);
-    st.crc          = ComputeCrc(st);
-    storage().Save();
+    // Only save if active_slot actually changed; avoid flash wear from loading the same slot
+    if (st.active_slot != s) {
+        active_slot_    = s;
+        st.active_slot  = static_cast<uint16_t>(s);
+        st.crc          = ComputeCrc(st);
+        storage().Save();
+    } else {
+        active_slot_ = s;
+    }
     return true;
 }
 

@@ -101,7 +101,9 @@ void AudioEngine::ProcessBlock(AudioHandle::InputBuffer  in,
     // Recompute only when mix changes; trig is expensive on Cortex-M7.
     if (params.mix != last_mix_) {
         last_mix_ = params.mix;
-        const float angle = params.mix * 1.57079632679f; // pi/2
+        const float mix = (params.mix < 0.0f) ? 0.0f
+                        : (params.mix > 1.0f) ? 1.0f : params.mix;
+        const float angle = mix * 1.57079632679f; // pi/2
         mix_dry_          = fast_cos(angle);
         mix_wet_          = fast_sin(angle);
     }
