@@ -53,11 +53,13 @@ make program
 ### VST Plugin
 
 ```bash
-mkdir -p desktop/vst/build && cd desktop/vst/build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make -j4
-make install-user        # VST3 + Standalone → ~/Library/Audio/Plug-Ins/VST3 + ~/Applications
+make vst -j4                  # build VST3 + Standalone
+make vst-install              # install VST3 + Standalone → ~/Library/Audio/Plug-Ins/VST3 + ~/Applications
+make vst-install-vst3         # VST3 only
+make vst-install-standalone   # Standalone only
 ```
+
+The cmake build directory (`desktop/vst/build/`) is bootstrapped automatically on first run.
 
 ## Architecture
 

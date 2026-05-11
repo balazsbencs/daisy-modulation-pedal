@@ -51,3 +51,25 @@ OPT = -Os
 # flash/debug targets, and all required flags for the STM32H750.
 SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
 include $(SYSTEM_FILES_DIR)/Makefile
+
+# ── VST Plugin (desktop) ──────────────────────────────────────────────────────
+VST_BUILD_DIR = desktop/vst/build
+
+.PHONY: vst vst-install vst-install-vst3 vst-install-standalone
+
+# Bootstrap cmake on first use (or if the build dir was wiped).
+$(VST_BUILD_DIR)/Makefile:
+	mkdir -p $(VST_BUILD_DIR)
+	cd $(VST_BUILD_DIR) && cmake .. -DCMAKE_BUILD_TYPE=Release
+
+vst: $(VST_BUILD_DIR)/Makefile
+	$(MAKE) -C $(VST_BUILD_DIR)
+
+vst-install: $(VST_BUILD_DIR)/Makefile
+	$(MAKE) -C $(VST_BUILD_DIR) install-user
+
+vst-install-vst3: $(VST_BUILD_DIR)/Makefile
+	$(MAKE) -C $(VST_BUILD_DIR) install-user-vst3
+
+vst-install-standalone: $(VST_BUILD_DIR)/Makefile
+	$(MAKE) -C $(VST_BUILD_DIR) install-user-standalone
